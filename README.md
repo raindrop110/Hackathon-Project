@@ -8,7 +8,8 @@ Hackathon project for Humana Medicare Advantage. Transforms raw healthcare call 
 
 ```bash
 git clone <repo-url> && cd Hackathon-Project
-cp .env.example .env        # add your GOOGLE_API_KEY
+cp .env.example .env        # fill in your GCP project ID
+gcloud auth application-default login   # authenticate via ADC
 make install                # install all Python + Node deps
 make dev                    # launch backend :8000 + frontend :5173
 ```
@@ -34,7 +35,8 @@ Open http://localhost:5173 — drop a transcript in, watch the pipeline run.
 | Python | 3.11+ |
 | Node.js | 18+ |
 | Google ADK | `pip install google-adk` |
-| Gemini API key | [ai.google.dev](https://ai.google.dev/gemini-api/docs/api-key) |
+| Google Cloud SDK | `gcloud` CLI — for ADC auth |
+| GCP project | Vertex AI API enabled |
 
 ---
 
@@ -67,15 +69,32 @@ git clone <repo-url>
 cd Hackathon-Project
 ```
 
-### 2. Set your API key
+### 2. Authenticate with Vertex AI (Application Default Credentials)
+
+GADK uses Vertex AI when `GOOGLE_GENAI_USE_VERTEXAI=1` is set. Auth is handled via ADC — no API key needed.
 
 ```bash
-cp .env.example .env          # or create .env manually
-# Edit .env and set:
-# GOOGLE_API_KEY=your_key_here
+# One-time login (writes creds to ~/.config/gcloud/)
+gcloud auth application-default login
+
+# Then copy and edit the env file
+cp .env.example .env
 ```
 
-> Get a key at https://ai.google.dev/gemini-api/docs/api-key
+Edit `.env` and replace `your-gcp-project-id` with your actual GCP project:
+
+```
+GOOGLE_GENAI_USE_VERTEXAI=1
+GOOGLE_CLOUD_PROJECT=my-humana-project
+GOOGLE_CLOUD_LOCATION=us-central1
+```
+
+Make sure the **Vertex AI API** is enabled in that project:
+```bash
+gcloud services enable aiplatform.googleapis.com --project=my-humana-project
+```
+
+> If running inside a GCP environment (Cloud Run, Vertex AI Workbench, etc.) ADC is available automatically — no `gcloud auth` needed.
 
 ### 3. Install Python dependencies
 
@@ -149,7 +168,11 @@ There is also a pre-built test JSON in `disposition_normalization/test_json/2nd_
 
 | Variable | Required | Description |
 |---|---|---|
-| `GOOGLE_API_KEY` | Yes | Gemini API key for all GADK agents |
+| `GOOGLE_GENAI_USE_VERTEXAI` | Yes | Set to `1` to route all GADK calls through Vertex AI |
+| `GOOGLE_CLOUD_PROJECT` | Yes | GCP project ID with Vertex AI API enabled |
+| `GOOGLE_CLOUD_LOCATION` | Yes | Region for Vertex AI (e.g. `us-central1`) |
+
+Authentication uses **Application Default Credentials** — run `gcloud auth application-default login` once before starting the servers.
 
 ---
 
