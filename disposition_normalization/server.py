@@ -1,6 +1,7 @@
 import asyncio
 import json
 import tempfile
+import uuid
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -15,6 +16,7 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
 from disposition_normalization.orchestrator_agent import root_agent as orchestrator
+from test_comparison_agent import root_agent as comparison_agent
 
 app = FastAPI(title="Disposition Normalization API")
 
@@ -146,6 +148,112 @@ async def _run_workflow(run_id: str, file_path: str, queue: asyncio.Queue) -> No
         Path(file_path).unlink(missing_ok=True)
 
 
+# Per-run SSE queues for comparison runs
+_cmp_queues: dict[str, asyncio.Queue] = {}
+
+# Maps sub-agent name → frontend stage ID
+_CMP_STAGE = {
+    "test_data_generator": "cmp_generate",
+    "batch_normalizer": "cmp_normalize",
+    "accuracy_comparator": "cmp_compare",
+}
+
+_CMP_STAGE_LABELS = {
+    "cmp_generate": "Generating test data",
+    "cmp_normalize": "Normalizing records",
+    "cmp_compare": "Comparing results",
+}
+
+
+def _run_comparison_sync(
+    run_id: str,
+    loop: asyncio.AbstractEventLoop,
+    queue: asyncio.Queue,
+    session_service: InMemorySessionService,
+    session_id: str,
+) -> None:
+    """Run the comparison SequentialAgent synchronously in a thread."""
+    runner = Runner(
+        agent=comparison_agent,
+        app_name="test_comparison",
+        session_service=session_service,
+    )
+
+    def emit(event_dict: dict) -> None:
+        loop.call_soon_threadsafe(queue.put_nowait, event_dict)
+
+    stages_started: set[str] = set()
+    stages_completed: set[str] = set()
+    comparison_report: dict | None = None
+
+    for event in runner.run(
+        user_id="comparison",
+        session_id=session_id,
+        new_message=types.Content(
+            role="user",
+            parts=[types.Part(text="Run the full normalization accuracy comparison.")],
+        ),
+    ):
+        author: str = getattr(event, "author", "") or ""
+        stage = _CMP_STAGE.get(author)
+
+        if stage and stage not in stages_started:
+            stages_started.add(stage)
+            emit({
+                "type": "stage_start",
+                "stageId": stage,
+                "message": f"{_CMP_STAGE_LABELS.get(stage, stage)}…",
+            })
+
+        if stage and event.is_final_response() and stage not in stages_completed:
+            stages_completed.add(stage)
+            text = ""
+            if event.content and event.content.parts:
+                for part in event.content.parts:
+                    if hasattr(part, "text") and part.text:
+                        text += part.text
+            try:
+                result = json.loads(text.strip())
+            except json.JSONDecodeError:
+                result = {"raw": text.strip()}
+
+            if author == "accuracy_comparator":
+                comparison_report = result
+
+            emit({
+                "type": "stage_complete",
+                "stageId": stage,
+                "message": f"{_CMP_STAGE_LABELS.get(stage, stage)} complete",
+                "result": result,
+            })
+
+        # Root SequentialAgent finished — guard against missing sub-events
+        if author == comparison_agent.name and event.is_final_response():
+            for stage_id in ("cmp_generate", "cmp_normalize", "cmp_compare"):
+                if stage_id not in stages_started:
+                    emit({"type": "stage_start", "stageId": stage_id})
+                if stage_id not in stages_completed:
+                    emit({"type": "stage_complete", "stageId": stage_id, "message": "Complete"})
+            emit({"type": "stage_complete", "stageId": "cmp_complete", "message": "Comparison complete"})
+            emit({"type": "run_complete", "result": comparison_report})
+
+
+async def _run_comparison(run_id: str, queue: asyncio.Queue) -> None:
+    loop = asyncio.get_running_loop()
+    session_service = InMemorySessionService()
+    session = await session_service.create_session(
+        app_name="test_comparison",
+        user_id="comparison",
+    )
+    try:
+        await asyncio.to_thread(
+            _run_comparison_sync,
+            run_id, loop, queue, session_service, session.id,
+        )
+    except Exception as exc:
+        queue.put_nowait({"type": "run_error", "error": str(exc)})
+
+
 # ── API endpoints ────────────────────────────────────────────────────────────
 
 @app.post("/api/workflow/start")
@@ -186,6 +294,38 @@ async def stream_events(run_id: str):
             yield f"data: {json.dumps(event)}\n\n"
             if event["type"] in ("run_complete", "run_error"):
                 _queues.pop(run_id, None)
+                break
+
+    return StreamingResponse(
+        _generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@app.post("/api/comparison/run")
+async def start_comparison():
+    run_id = uuid.uuid4().hex[:12]
+    queue: asyncio.Queue = asyncio.Queue()
+    _cmp_queues[run_id] = queue
+    asyncio.create_task(_run_comparison(run_id, queue))
+    return {"runId": run_id}
+
+
+@app.get("/api/comparison/{run_id}/stream")
+async def stream_comparison(run_id: str):
+    queue = _cmp_queues.get(run_id)
+    if queue is None:
+        async def _not_found():
+            yield f"data: {json.dumps({'type': 'run_error', 'error': 'Run not found'})}\n\n"
+        return StreamingResponse(_not_found(), media_type="text/event-stream")
+
+    async def _generate():
+        while True:
+            event = await queue.get()
+            yield f"data: {json.dumps(event)}\n\n"
+            if event["type"] in ("run_complete", "run_error"):
+                _cmp_queues.pop(run_id, None)
                 break
 
     return StreamingResponse(

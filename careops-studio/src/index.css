@@ -493,12 +493,56 @@ code {
   opacity: 0.75;
 }
 
+/* ——— Workbench shell + tabs ——— */
+
+.workbench-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.tab-bar {
+  display: flex;
+  gap: 2px;
+  padding: 0 14px;
+  background: var(--surface-warm);
+  border-bottom: 1px solid var(--panel-left-border);
+  flex-shrink: 0;
+  z-index: 2;
+}
+
+.tab {
+  padding: 8px 16px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+  transition:
+    color 120ms ease,
+    border-color 120ms ease;
+}
+
+.tab:hover {
+  color: var(--ink);
+}
+
+.tab--active {
+  color: var(--humana-green-deep);
+  border-bottom-color: var(--humana-green);
+}
+
 /* ——— Workbench (right) ——— */
 
 .workbench {
   position: relative;
   z-index: 1;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   background: transparent;
 }
@@ -1218,4 +1262,107 @@ code {
 .diff-table__to {
   font-weight: 600;
   color: var(--success);
+}
+
+/* ——— Comparison view ——— */
+
+.comparison {
+  padding: 24px 28px 40px;
+  max-width: 860px;
+}
+
+.comparison--idle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: 60px 24px;
+  gap: 14px;
+  text-align: center;
+}
+
+.comparison__idle-icon {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  background: color-mix(in oklab, var(--humana-green) 12%, white);
+  color: var(--humana-green-deep);
+  margin-bottom: 4px;
+}
+
+.comparison__idle-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.comparison__idle-hint {
+  margin: 0 0 8px;
+  max-width: 42ch;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+
+.comparison__summary {
+  margin: 12px 0 16px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--ink-muted);
+  border-left: 3px solid var(--panel-left-border);
+  padding-left: 12px;
+}
+
+/* Accuracy hero number */
+
+.accuracy-hero {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 12px 0 4px;
+}
+
+.accuracy-hero__number {
+  font-size: 52px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.accuracy-hero--high  .accuracy-hero__number { color: var(--success); }
+.accuracy-hero--medium .accuracy-hero__number { color: var(--warning); }
+.accuracy-hero--low   .accuracy-hero__number { color: var(--danger); }
+
+.accuracy-hero__label {
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+
+/* Inline accuracy badge in tables */
+
+.accuracy-inline {
+  font-weight: 700;
+  font-size: 13px;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.accuracy-inline--high {
+  background: color-mix(in oklab, var(--success) 12%, white);
+  color: var(--success);
+}
+
+.accuracy-inline--medium {
+  background: color-mix(in oklab, var(--warning) 12%, white);
+  color: var(--warning);
+}
+
+.accuracy-inline--low {
+  background: color-mix(in oklab, var(--danger) 10%, white);
+  color: var(--danger);
 }

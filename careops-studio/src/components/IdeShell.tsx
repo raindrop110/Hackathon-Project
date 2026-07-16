@@ -1,13 +1,18 @@
+import { useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { useWorkflowStore } from "../store/workflowStore";
+import { ComparisonView } from "./ComparisonView";
 import { DropZone } from "./DropZone";
 import { FileExplorer } from "./FileExplorer";
 import { StatusBar } from "./StatusBar";
 import { TitleBar } from "./TitleBar";
 import { WorkflowView } from "./WorkflowView";
 
+type Tab = "workflow" | "comparison";
+
 export function IdeShell() {
   const activeRun = useWorkflowStore((s) => s.activeRun);
+  const [tab, setTab] = useState<Tab>("workflow");
 
   return (
     <div className="ide">
@@ -25,9 +30,31 @@ export function IdeShell() {
           </Panel>
           <Separator className="resize-handle" />
           <Panel id="workbench" defaultSize="72%" minSize="40%" className="ide__right">
-            <main className="workbench">
-              {activeRun ? <WorkflowView /> : <DropZone />}
-            </main>
+            <div className="workbench-shell">
+              <div className="tab-bar" role="tablist">
+                <button
+                  role="tab"
+                  aria-selected={tab === "workflow"}
+                  className={`tab ${tab === "workflow" ? "tab--active" : ""}`}
+                  onClick={() => setTab("workflow")}
+                >
+                  Workflow
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={tab === "comparison"}
+                  className={`tab ${tab === "comparison" ? "tab--active" : ""}`}
+                  onClick={() => setTab("comparison")}
+                >
+                  Comparison
+                </button>
+              </div>
+              <main className="workbench">
+                {tab === "workflow"
+                  ? activeRun ? <WorkflowView /> : <DropZone />
+                  : <ComparisonView />}
+              </main>
+            </div>
           </Panel>
         </Group>
       </div>

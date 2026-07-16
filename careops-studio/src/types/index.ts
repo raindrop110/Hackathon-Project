@@ -107,6 +107,44 @@ export type WorkflowEvent =
   | { type: "run_complete"; result?: RunResult }
   | { type: "run_error"; error: string };
 
+// ── Comparison types ────────────────────────────────────────────────────────
+
+export interface FieldAccuracy {
+  field_name: string;
+  correct: number;
+  total: number;
+  accuracy_pct: number;
+}
+
+export interface RecordMismatch {
+  record_id: string;
+  source_type: string;
+  hedis_measure: string;
+  field: string;
+  ground_truth: string;
+  normalized: string;
+  normalization_confidence: string;
+}
+
+export interface ComparisonResult {
+  batch_id: string;
+  total_records: number;
+  records_fully_correct: number;
+  record_accuracy_pct: number;
+  field_accuracy: FieldAccuracy[];
+  accuracy_by_source_type: {
+    call_transcript: number;
+    ivr_result_code: number;
+    csr_note: number;
+    web_form: number;
+  };
+  high_confidence_record_accuracy_pct: number;
+  low_confidence_record_accuracy_pct: number;
+  total_field_mismatches: number;
+  mismatches: RecordMismatch[];
+  summary: string;
+}
+
 // ── Client ──────────────────────────────────────────────────────────────────
 
 export type WorkflowStartPayload = {
