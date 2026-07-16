@@ -28,6 +28,7 @@ import os
 from dotenv import load_dotenv
 from google.adk.agents import LlmAgent, SequentialAgent
 
+from .db_agent import save_to_json_db
 from .schemas import DatasetSummary, GeneratedDataset, ValidatedDataset
 from .tools import build_corpus_context
 
@@ -38,7 +39,7 @@ load_dotenv()
 # ---------------------------------------------------------------------------
 
 MODEL = "gemini-2.5-flash"  # change this constant to switch models globally
-BATCH_SIZE: int = int(os.getenv("BATCH_SIZE", "1"))
+BATCH_SIZE: int = int(os.getenv("BATCH_SIZE", "5"))
 
 # Pre-load full corpus context once at import time.
 # SWAP SEAM: remove this line when Vertex AI RAG is wired up.
@@ -174,7 +175,7 @@ generate_data_agent = LlmAgent(
 # Agent 2 — SME Data Validator Agent
 # ---------------------------------------------------------------------------
 
-_VALIDATE_INSTRUCTION = f"""
+_VALIDATE_INSTRUCTION = """
 You are a clinical and business subject-matter expert (SME) performing quality assurance
 on synthetic healthcare care-gap disposition data.
 
@@ -194,11 +195,6 @@ HOW TO READ THE INPUT
 The generated_data is available in the conversation context above (output of the
 previous pipeline step) and also as session state["generated_data"].
 Parse the JSON and process every record in the "records" array.
-
-═══════════════════════════════════════════════════════════
-REFERENCE CORPUS (pre-loaded; Vertex AI RAG Engine in production)
-═══════════════════════════════════════════════════════════
-{_CORPUS_CONTEXT}
 
 ═══════════════════════════════════════════════════════════
 VALIDATION CHECKLIST — apply to EVERY record
@@ -370,11 +366,13 @@ root_agent = SequentialAgent(
         "with ground-truth labels; "
         "(2) sme_validator_agent performs clinical/business QA on each record; "
         "(3) summary_generator_agent produces the golden-dataset summary for the "
-        "downstream Comparison step."
+        "downstream Comparison step. "
+        "After all stages complete, save_to_json_db persists outputs to db/datasets.json."
     ),
     sub_agents=[
         generate_data_agent,
         sme_validator_agent,
         summary_generator_agent,
     ],
+    after_agent_callback=save_to_json_db,
 )
