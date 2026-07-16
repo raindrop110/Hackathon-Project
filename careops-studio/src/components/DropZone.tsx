@@ -20,7 +20,7 @@ export function DropZone() {
       if (!valid.length) return;
 
       const nodes = addUploadedFiles(valid);
-      await startForFiles(nodes);
+      await startForFiles(nodes, valid);
     },
     [addUploadedFiles, startForFiles],
   );

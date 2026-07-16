@@ -2,7 +2,16 @@ import { create } from "zustand";
 import { createInitialStages } from "../data/seed";
 import { agentWorkflowClient } from "../lib/agentWorkflowClient";
 import { createId } from "../lib/files";
-import type { AgentStatus, FileNode, WorkflowEvent, WorkflowRun } from "../types";
+import type {
+  AgentStatus,
+  CareGapResult,
+  DispositionResult,
+  FileNode,
+  RunResult,
+  SummaryAgentResult,
+  WorkflowEvent,
+  WorkflowRun,
+} from "../types";
 import { useFileStore } from "./fileStore";
 
 interface WorkflowStore {
@@ -10,7 +19,7 @@ interface WorkflowStore {
   activeRun: WorkflowRun | null;
   runs: WorkflowRun[];
   unsubscribe: (() => void) | null;
-  startForFiles: (files: FileNode[]) => Promise<void>;
+  startForFiles: (files: FileNode[], rawFiles: File[]) => Promise<void>;
   applyEvent: (event: WorkflowEvent) => void;
   resetToIdle: () => void;
 }
@@ -30,14 +39,14 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     const { activeRun } = get();
     if (!activeRun) return;
 
-    const pushLog = (line: string) => [...activeRun.logs, line];
+    const pushLog = (line: string) => [...activeRun.logs, `[${new Date().toLocaleTimeString()}] ${line}`];
 
     if (event.type === "stage_start") {
       set({
         activeRun: {
           ...activeRun,
           activeStageId: event.stageId,
-          logs: pushLog(event.message ?? `Stage ${event.stageId} started`),
+          logs: pushLog(event.message ?? `${event.stageId} started`),
           stages: activeRun.stages.map((s) =>
             s.id === event.stageId
               ? { ...s, status: "active", message: event.message }
@@ -55,14 +64,9 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       set({
         activeRun: {
           ...activeRun,
-          logs: pushLog(
-            event.message ??
-              `Progress ${event.stageId}${event.pct != null ? ` (${event.pct}%)` : ""}`,
-          ),
+          logs: pushLog(event.message ?? `${event.stageId} in progress`),
           stages: activeRun.stages.map((s) =>
-            s.id === event.stageId
-              ? { ...s, message: event.message, status: "active" }
-              : s,
+            s.id === event.stageId ? { ...s, message: event.message, status: "active" } : s,
           ),
         },
       });
@@ -70,14 +74,24 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     }
 
     if (event.type === "stage_complete") {
+      const updatedResults = { ...activeRun.agentResults };
+      if (event.result !== undefined) {
+        if (event.stageId === "summarization") {
+          updatedResults.summarization = event.result as SummaryAgentResult;
+        } else if (event.stageId === "schema_normalization") {
+          updatedResults.schema_normalization = event.result as DispositionResult;
+        } else if (event.stageId === "care_gap_connection") {
+          updatedResults.care_gap_connection = event.result as CareGapResult;
+        }
+      }
+
       set({
         activeRun: {
           ...activeRun,
-          logs: pushLog(event.message ?? `Stage ${event.stageId} complete`),
+          agentResults: updatedResults,
+          logs: pushLog(event.message ?? `${event.stageId} complete`),
           stages: activeRun.stages.map((s) =>
-            s.id === event.stageId
-              ? { ...s, status: "completed", message: event.message }
-              : s,
+            s.id === event.stageId ? { ...s, status: "completed", message: event.message } : s,
           ),
         },
       });
@@ -90,17 +104,13 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
         activeRun: {
           ...activeRun,
           status: "error",
-          logs: pushLog(`Error: ${event.error}`),
+          logs: pushLog(`Error in ${event.stageId}: ${event.error}`),
           stages: activeRun.stages.map((s) =>
-            s.id === event.stageId
-              ? { ...s, status: "error", message: event.error }
-              : s,
+            s.id === event.stageId ? { ...s, status: "error", message: event.error } : s,
           ),
         },
       });
-      activeRun.fileIds.forEach((id) =>
-        useFileStore.getState().setFileStatus(id, "error"),
-      );
+      activeRun.fileIds.forEach((id) => useFileStore.getState().setFileStatus(id, "error"));
       return;
     }
 
@@ -113,16 +123,12 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
           ...activeRun,
           status: "complete",
           activeStageId: "complete",
-          logs: pushLog("Run complete — files ready in workspace"),
-          stages: activeRun.stages.map((s) => ({
-            ...s,
-            status: "completed",
-          })),
+          finalResult: event.result as RunResult | undefined,
+          logs: pushLog("Workflow complete — all agents finished"),
+          stages: activeRun.stages.map((s) => ({ ...s, status: "completed" })),
         },
       });
-      activeRun.fileIds.forEach((id) =>
-        useFileStore.getState().setFileStatus(id, "new"),
-      );
+      activeRun.fileIds.forEach((id) => useFileStore.getState().setFileStatus(id, "new"));
       return;
     }
 
@@ -134,16 +140,14 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
         activeRun: {
           ...activeRun,
           status: "error",
-          logs: pushLog(`Run error: ${event.error}`),
+          logs: pushLog(`Run failed: ${event.error}`),
         },
       });
-      activeRun.fileIds.forEach((id) =>
-        useFileStore.getState().setFileStatus(id, "error"),
-      );
+      activeRun.fileIds.forEach((id) => useFileStore.getState().setFileStatus(id, "error"));
     }
   },
 
-  startForFiles: async (files) => {
+  startForFiles: async (files, rawFiles) => {
     get().unsubscribe?.();
 
     const runId = createId("run");
@@ -155,32 +159,21 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       status: "running",
       stages: createInitialStages(),
       activeStageId: "ingest",
-      logs: [`Queued ${files.length} file(s) for ingest`],
+      logs: [`[${new Date().toLocaleTimeString()}] Queued ${files.length} file(s) for processing`],
+      agentResults: {},
     };
 
-    set({
-      activeRun: run,
-      agentStatus: "running",
-      runs: [run, ...get().runs],
-    });
-
-    files.forEach((f) =>
-      useFileStore.getState().setFileStatus(f.id, "processing"),
-    );
-
-    // Simulate brief upload, then hand off to agent client
-    await new Promise((r) => setTimeout(r, 350));
-    files.forEach((f) =>
-      useFileStore.getState().setFileStatus(f.id, "processing"),
-    );
+    set({ activeRun: run, agentStatus: "running", runs: [run, ...get().runs] });
+    files.forEach((f) => useFileStore.getState().setFileStatus(f.id, "processing"));
 
     await agentWorkflowClient.start({
       runId,
-      files: files.map((f) => ({
+      files: files.map((f, i) => ({
         id: f.id,
         name: f.name,
         path: f.path,
-        mimeType: f.fileKind === "csv" ? "text/csv" : "application/octet-stream",
+        mimeType: f.fileKind === "csv" ? "text/csv" : "text/plain",
+        rawFile: rawFiles[i],
       })),
     });
 

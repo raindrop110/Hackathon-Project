@@ -136,27 +136,27 @@ function FolderRow({
   onToggle: () => void;
   children?: ReactNode;
 }) {
+  const handleClick = () => {
+    onSelect();
+    onToggle();
+  };
+
   return (
     <div className="tree-folder">
       <button
         type="button"
         role="treeitem"
         aria-expanded={!node.collapsed}
+        aria-selected={selected}
+        aria-label={`${node.name} folder, ${node.collapsed ? "collapsed" : "expanded"}`}
         className={`tree-row ${selected ? "tree-row--selected" : ""}`}
         style={{ paddingLeft: 8 + depth * 14 }}
-        onClick={onSelect}
-        onDoubleClick={onToggle}
+        onClick={handleClick}
       >
-        <span
-          className="tree-row__chevron"
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggle();
-          }}
-        >
+        <span className="tree-row__chevron" aria-hidden>
           {node.collapsed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
         </span>
-        <span className="tree-row__icon">
+        <span className="tree-row__icon" aria-hidden>
           {node.collapsed ? <Folder size={14} /> : <FolderOpen size={14} />}
         </span>
         <span className="tree-row__name">{node.name}</span>
@@ -181,11 +181,12 @@ function FileRow({
     <button
       type="button"
       role="treeitem"
+      aria-selected={selected}
       className={`tree-row tree-row--file ${selected ? "tree-row--selected" : ""} status-${node.status}`}
       style={{ paddingLeft: 8 + depth * 14 + 16 }}
       onClick={onSelect}
     >
-      <span className="tree-row__icon">
+      <span className="tree-row__icon" aria-hidden>
         <FileIcon node={node} />
       </span>
       <span className="tree-row__name" title={node.path}>

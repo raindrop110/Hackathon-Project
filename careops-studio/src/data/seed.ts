@@ -4,27 +4,27 @@ export const WORKFLOW_STAGE_DEFS: Omit<WorkflowStage, "status" | "message">[] = 
   {
     id: "ingest",
     label: "Ingest",
-    description: "Accept file into the workspace and register metadata.",
+    description: "File received and saved to workspace.",
   },
   {
-    id: "validate",
-    label: "Validate",
-    description: "Check schema, encoding, and required columns.",
+    id: "summarization",
+    label: "Summarization",
+    description: "Extract member, gap, and interaction details from the raw file.",
   },
   {
-    id: "profile",
-    label: "Profile",
-    description: "Summarize rows, keys, and data quality signals.",
+    id: "schema_normalization",
+    label: "Schema Normalization",
+    description: "Map extracted data to the campaign_disposition schema.",
   },
   {
-    id: "workflow",
-    label: "Agent workflow",
-    description: "Run the teammate agentic pipeline (open for integration).",
+    id: "care_gap_connection",
+    label: "Care Gap Connection",
+    description: "Look up and update the matching care gap record.",
   },
   {
     id: "complete",
-    label: "Ready",
-    description: "File is available in the explorer for downstream use.",
+    label: "Complete",
+    description: "All agents finished — results are ready.",
   },
 ];
 
@@ -82,13 +82,7 @@ export const SEED_TREE: TreeNode[] = [
   file("historical_interventions.csv", "folder-structured", "data/structured/historical_interventions.csv", "csv", "27 rows"),
   file("stars_performance.csv", "folder-structured", "data/structured/stars_performance.csv", "csv", "10 rows"),
   // unstructured
-  file(
-    "stars_performance_report.md",
-    "folder-unstructured",
-    "data/unstructured/stars_performance_report.md",
-    "md",
-    "report",
-  ),
+  file("stars_performance_report.md", "folder-unstructured", "data/unstructured/stars_performance_report.md", "md", "report"),
   file("transcript_01_denied_claim_inquiry.txt", "folder-transcripts", "data/unstructured/call_transcripts/transcript_01_denied_claim_inquiry.txt", "txt"),
   file("transcript_02_prior_auth_question.txt", "folder-transcripts", "data/unstructured/call_transcripts/transcript_02_prior_auth_question.txt", "txt"),
   file("transcript_03_care_gap_outreach.txt", "folder-transcripts", "data/unstructured/call_transcripts/transcript_03_care_gap_outreach.txt", "txt"),
