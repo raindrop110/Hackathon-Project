@@ -56,10 +56,61 @@ def lookup_care_gap_by_member_measure(member_id: str, measure_id: str) -> dict[s
         sorted_rows = sorted(
             rows,
             key=lambda r: (r["gap_status"] != "Open", r.get("due_date", "") or ""),
-            reverse=False,
         )
         return {"found": True, "count": len(sorted_rows), "care_gaps": sorted_rows}
     return {
         "found": False,
         "message": f"No care gaps found for member_id '{member_id}' and measure_id '{measure_id}'",
     }
+
+
+def update_care_gap(gap_id: str, updates: dict[str, str]) -> dict[str, Any]:
+    """Update fields on a care gap record and write the change back to care_gaps.csv.
+
+    Args:
+        gap_id: The gap_id of the record to update (e.g. 'GAP000413').
+        updates: A dict mapping column names to new string values to write,
+                 e.g. {"gap_status": "Closed", "outreach_attempts": "3"}.
+                 Only valid care_gaps column names are accepted.
+
+    Returns {"success": True, "gap_id": ..., "updated_fields": [...]} on success,
+    or {"success": False, "error": ...} if the gap was not found or a column name is invalid.
+    """
+    global _loaded
+
+    rows: list[dict[str, str]] = []
+    fieldnames: list[str] = []
+
+    with open(_DATA_PATH, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        fieldnames = list(reader.fieldnames or [])
+        rows = list(reader)
+
+    invalid = [k for k in updates if k not in fieldnames]
+    if invalid:
+        return {
+            "success": False,
+            "error": f"Invalid column names: {invalid}. Valid columns: {fieldnames}",
+        }
+
+    found = False
+    for row in rows:
+        if row["gap_id"] == gap_id:
+            row.update(updates)
+            found = True
+            break
+
+    if not found:
+        return {"success": False, "error": f"No care gap found for gap_id '{gap_id}'"}
+
+    with open(_DATA_PATH, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+    # Invalidate in-memory cache so next lookup reads fresh data
+    _loaded = False
+    _by_gap_id.clear()
+    _by_member_measure.clear()
+
+    return {"success": True, "gap_id": gap_id, "updated_fields": list(updates.keys())}

@@ -1,79 +1,81 @@
 from google.adk.agents import LlmAgent
 
-from .tools.care_gap_lookup import lookup_care_gap_by_id, lookup_care_gap_by_member_measure
+from .tools.care_gap_lookup import (
+    lookup_care_gap_by_id,
+    lookup_care_gap_by_member_measure,
+    update_care_gap,
+)
 from .tools.json_loader import load_input_json
 
 _INSTRUCTION = """
 You are a data connection agent. You receive a path to a JSON file containing a
-campaign_disposition row and your job is to find its corresponding care_gap record,
-then return both together as structured JSON.
-
-Every campaign_disposition should have a matching care_gap. If one cannot be found, you
-signal that the workflow needs to be retried later.
+campaign_disposition row. Your job is to find the matching care_gap record and update
+it in care_gaps.csv based on the disposition data, then return a boolean success signal.
 
 ## Step-by-Step Process
 
 **Step 1 — Load the input file**
-Call `load_input_json` with the file path provided. The result contains a 'records' list.
-If there are multiple records, use the one that most resembles a campaign_disposition row
-(i.e. contains gap_id, member_id, or measure_id fields). Prefer the record with more
-structured/complete fields if ambiguous.
+Call `load_input_json` with the file path. If there are multiple records in 'records',
+use the one that contains gap_id, member_id, or measure_id fields (most structured one).
 
 **Step 2 — Extract identifiers**
-From the selected record, read these fields:
-- `gap_id` (primary lookup key, e.g. "GAP000435")
-- `member_id` (fallback key, e.g. "MBR00159")
-- `measure_id` (fallback key, e.g. "TRC")
+From the selected record, read:
+- `gap_id` (primary lookup key)
+- `member_id` (fallback)
+- `measure_id` (fallback)
 
-**Step 3 — Primary lookup**
-Call `lookup_care_gap_by_id` with the `gap_id`.
-If `found` is true, proceed to Step 5.
+**Step 3 — Look up the care gap**
+Call `lookup_care_gap_by_id` with gap_id.
+If found=false, call `lookup_care_gap_by_member_measure` with member_id and measure_id.
+If still not found, return {"success": false, "reason": "care gap not found"} and stop.
 
-**Step 4 — Fallback lookup**
-If the primary lookup returned `found=false`, call `lookup_care_gap_by_member_measure`
-with `member_id` and `measure_id`.
-- If multiple gaps are returned, the best candidate is already first (Open status, newest due_date).
+**Step 4 — Determine updates**
+Using the campaign_disposition data and the current care_gap values, determine which
+fields need updating. Apply the following logic:
 
-**Step 5 — Return result**
+- `gap_status`: set to "Closed" if `gap_credited_in_system` is true in the disposition,
+  or if `actual_completion_likely` is true. Otherwise leave unchanged.
+- `outreach_attempts`: set to the disposition's `attempt_number` if it is greater than
+  the current `outreach_attempts` value. All values must be strings for CSV writing.
+- `last_service_date`: set from the disposition's `attempt_date` only if gap_status
+  is being set to "Closed" and no last_service_date currently exists.
 
-If a care gap was found, return exactly this JSON structure:
-```
+Only include a field in updates if its value is actually changing.
+
+**Step 5 — Write the update**
+Call `update_care_gap` with the gap_id and the updates dict.
+All values in the updates dict must be strings (CSV format).
+
+**Step 6 — Return**
+Return exactly this structure:
 {
-  "status": "matched",
-  "campaign_disposition": <the full selected input record>,
-  "care_gap": <the matched care gap row>
+  "success": true,
+  "gap_id": "<the gap_id that was updated>",
+  "changes": {
+    "<field_name>": {"from": "<old_value>", "to": "<new_value>"},
+    ...
+  }
 }
-```
 
-If no care gap was found by either method, return exactly this JSON structure:
-```
-{
-  "status": "retry_required",
-  "reason": "<brief explanation of what was tried and why it failed>",
-  "retry_context": {
-    "gap_id": "<gap_id from input>",
-    "member_id": "<member_id from input>",
-    "measure_id": "<measure_id from input>"
-  },
-  "campaign_disposition": <the full selected input record>
-}
-```
+Build the "changes" object by comparing the old care_gap values (from Step 3) with the
+new values you passed to update_care_gap. Only include fields that actually changed.
+
+If any step failed, return: {"success": false, "reason": "<brief explanation>"}
 
 ## Hard Rules
 - Your final response must be valid JSON only — no explanation, no markdown fences
-- Never modify or omit any fields from the selected campaign_disposition record
-- Never fabricate care_gap field values
-- If found via fallback (member+measure), use the single best-matched care_gap row (first in the list)
+- Never update fields that are not changing
+- Never pass non-string values in the updates dict to update_care_gap
+- If the gap was not found, return {"success": false, "reason": "care gap not found"}
 """
 
 root_agent = LlmAgent(
     name="data_connection_agent",
     model="gemini-2.5-pro",
     description=(
-        "Loads a JSON file containing a campaign_disposition row, looks up the matching "
-        "care_gap record by gap_id (with member+measure fallback), and returns both joined. "
-        "Returns retry_required status if no match is found."
+        "Loads a campaign_disposition JSON file, finds the matching care_gap, updates "
+        "care_gaps.csv with relevant fields from the disposition, and returns {success: true}."
     ),
     instruction=_INSTRUCTION,
-    tools=[load_input_json, lookup_care_gap_by_id, lookup_care_gap_by_member_measure],
+    tools=[load_input_json, lookup_care_gap_by_id, lookup_care_gap_by_member_measure, update_care_gap],
 )
