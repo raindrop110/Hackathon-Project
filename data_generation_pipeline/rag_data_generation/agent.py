@@ -38,7 +38,7 @@ load_dotenv()
 # ---------------------------------------------------------------------------
 
 MODEL = "gemini-2.5-flash"  # change this constant to switch models globally
-BATCH_SIZE: int = int(os.getenv("BATCH_SIZE", "10"))
+BATCH_SIZE: int = int(os.getenv("BATCH_SIZE", "1"))
 
 # Pre-load full corpus context once at import time.
 # SWAP SEAM: remove this line when Vertex AI RAG is wired up.

@@ -1,0 +1,24 @@
+{
+  "records": [
+    {
+      "record_id": "REC-000001",
+      "source_type": "web_form",
+      "raw_payload": "{\"submission_id\": \"WEB-SUB-001\", \"member_id\": \"MBR00045\", \"gap_id\": \"GAP000789\", \"measure_id\": \"COL\", \"submitted_at\": \"2026-03-10T14:30:00Z\", \"form_version\": \"1.2\", \"completion_status\": \"PARTIAL\", \"fields_completed\": 3, \"total_fields\": 6, \"member_responses\": {\"question_1\": \"Contact me by phone\", \"question_2\": \"I had my colonoscopy last year, but I don't remember the date or facility.\", \"question_3\": \"Best time 9-11 AM\"}}",
+      "member_id": "MBR00045",
+      "provider_id": null,
+      "care_gap_id": "COL",
+      "hedis_measure": "COL",
+      "responded": true,
+      "response_summary": "Member partially completed a web form, self-reporting completion of colorectal cancer screening but not providing full verifiable details. Requested a call back.",
+      "action_taken": "already_completed_unverified",
+      "care_gap_status": "attempted_not_closed",
+      "disposition_code": "DISP-COMP-UV",
+      "confidence": 0.45,
+      "validation_status": "valid",
+      "validation_notes": ""
+    }
+  ],
+  "batch_id": "BATCH-20260423-101530",
+  "generated_at": "2026-04-23T10:15:30Z",
+  "batch_size": 1
+}

@@ -1,0 +1,2 @@
+from .agent import synthetic_data_sme_validator_agent
+root_agent = synthetic_data_sme_validator_agent
