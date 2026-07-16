@@ -1,20 +1,40 @@
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
 
+/*
+  Humana-aligned tokens (hackathon approximation until official assets arrive)
+  Sources: Brand.Humana.com · DocuShare marketing (#5C9A1B) · Pantone 369 / Garden Lime (#5BA908)
+  Principles: approachable · authentic · optimistic · green+white primary · plum secondary
+  Tone: wellbeing / strength-based — avoid clinical blue, fear-red urgency, staged chrome
+*/
 :root {
-  --humana-green: #5c9a1b;
-  --humana-green-deep: #3f6e12;
-  --humana-green-deeper: #2d500c;
-  --panel-left-bg: #e8f3d6;
-  --panel-left-bg-hover: #dcecc4;
-  --panel-left-border: #c5dba3;
+  /* Primary — sampled from official Humana wordmark */
+  --humana-green: #4c8414;
+  --humana-green-bright: #5ba908;
+  --humana-green-deep: #3a6510;
+  --humana-green-deeper: #2a4a0c;
+
+  /* Secondary — Live Life Fully plum (accent only) */
+  --humana-plum: #6b3a6e;
+  --humana-plum-soft: #f6eef6;
+
+  /* Surfaces — clean white + soft green tint (optimistic, not clinical) */
+  --panel-left-bg: #eaf4dc;
+  --panel-left-bg-hover: #ddeec8;
+  --panel-left-border: #c8dea8;
   --panel-right-bg: #ffffff;
-  --surface-muted: #f5f7f2;
-  --ink: #1a2e0a;
-  --ink-muted: #5a6b4a;
-  --danger: #b42318;
-  --warning: #b54708;
+  --surface-muted: #f4f7ef;
+  --surface-warm: #fbfcf8;
+
+  /* Ink — green-tinted neutrals for cohesion */
+  --ink: #1c2f10;
+  --ink-muted: #56684a;
+
+  /* Status — calm, not alarmist */
+  --danger: #9b3b2f;
+  --warning: #9a5b12;
   --success: #3f6e12;
-  --focus-ring: #5c9a1b;
+  --focus-ring: #4c8414;
+
   --title-h: 42px;
   --status-h: 26px;
   --font-ui: "DM Sans", system-ui, sans-serif;
@@ -61,7 +81,7 @@ code {
   height: 100%;
   overflow: hidden;
   background:
-    radial-gradient(ellipse 80% 50% at 100% 0%, rgba(92, 154, 27, 0.06), transparent 55%),
+    radial-gradient(ellipse 70% 45% at 100% 0%, color-mix(in oklab, var(--humana-green) 8%, transparent), transparent 55%),
     var(--panel-right-bg);
 }
 
@@ -86,14 +106,18 @@ code {
 }
 
 .resize-handle {
-  width: 4px;
-  background: transparent;
+  width: 6px;
+  margin: 0 -1px;
+  background: var(--panel-left-border);
+  cursor: col-resize;
   transition: background 120ms ease;
+  outline: none;
 }
 
 .resize-handle:hover,
-.resize-handle[data-resize-handle-active] {
-  background: color-mix(in oklab, var(--humana-green) 55%, transparent);
+.resize-handle[data-separator="active"],
+.resize-handle:focus-visible {
+  background: var(--humana-green);
 }
 
 /* ——— Title bar ——— */
@@ -104,7 +128,7 @@ code {
   align-items: center;
   gap: 12px;
   padding: 0 14px;
-  background: #fbfcf8;
+  background: var(--surface-warm);
   border-bottom: 2px solid var(--humana-green);
   z-index: 2;
 }
@@ -114,19 +138,6 @@ code {
   align-items: center;
   gap: 10px;
   justify-self: start;
-}
-
-.title-bar__mark {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 4px;
-  background: var(--humana-green);
-  color: #fff;
-  font-weight: 700;
-  font-size: 14px;
-  letter-spacing: -0.02em;
 }
 
 .title-bar__names {
@@ -158,6 +169,12 @@ code {
   letter-spacing: 0.02em;
 }
 
+.title-bar__path-sep {
+  color: var(--humana-plum);
+  opacity: 0.55;
+  margin: 0 0.35em;
+}
+
 .title-bar__actions {
   display: flex;
   align-items: center;
@@ -179,8 +196,8 @@ code {
 }
 
 .agent-pill--running {
-  border-color: color-mix(in oklab, var(--warning) 40%, white);
-  background: #fff7ed;
+  border-color: color-mix(in oklab, var(--warning) 35%, white);
+  background: #fbf6ee;
   color: var(--warning);
 }
 
@@ -190,9 +207,13 @@ code {
   color: var(--success);
 }
 
+.agent-pill--idle {
+  border-color: color-mix(in oklab, var(--humana-plum) 18%, white);
+}
+
 .agent-pill--error {
-  border-color: color-mix(in oklab, var(--danger) 35%, white);
-  background: #fef3f2;
+  border-color: color-mix(in oklab, var(--danger) 30%, white);
+  background: #faf4f2;
   color: var(--danger);
 }
 

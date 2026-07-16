@@ -16,9 +16,6 @@ export function TitleBar() {
   return (
     <header className="title-bar">
       <div className="title-bar__brand">
-        <span className="title-bar__mark" aria-hidden>
-          H
-        </span>
         <div className="title-bar__names">
           <span className="title-bar__product">CareOps Studio</span>
           <span className="title-bar__project">hackathon-data</span>
@@ -26,7 +23,13 @@ export function TitleBar() {
       </div>
 
       <div className="title-bar__center" aria-hidden>
-        <span className="title-bar__path">humana · medicare advantage · synthetic</span>
+        <span className="title-bar__path">
+          Humana
+          <span className="title-bar__path-sep">·</span>
+          Medicare Advantage
+          <span className="title-bar__path-sep">·</span>
+          synthetic
+        </span>
       </div>
 
       <div className="title-bar__actions">

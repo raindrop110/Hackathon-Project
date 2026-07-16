@@ -14,11 +14,17 @@ export function IdeShell() {
       <TitleBar />
       <div className="ide__body">
         <Group orientation="horizontal" className="ide__panels">
-          <Panel defaultSize={28} minSize={18} maxSize={42} className="ide__left">
+          <Panel
+            id="explorer"
+            defaultSize="28%"
+            minSize="16%"
+            maxSize="45%"
+            className="ide__left"
+          >
             <FileExplorer />
           </Panel>
           <Separator className="resize-handle" />
-          <Panel defaultSize={72} minSize={40} className="ide__right">
+          <Panel id="workbench" defaultSize="72%" minSize="40%" className="ide__right">
             <main className="workbench">
               {activeRun ? <WorkflowView /> : <DropZone />}
             </main>
