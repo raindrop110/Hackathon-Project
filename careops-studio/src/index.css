@@ -140,6 +140,21 @@ code {
   justify-self: start;
 }
 
+.title-bar__logo {
+  display: block;
+  height: 20px;
+  width: auto;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.title-bar__divider {
+  width: 1px;
+  height: 20px;
+  background: var(--panel-left-border);
+  flex-shrink: 0;
+}
+
 .title-bar__names {
   display: flex;
   flex-direction: column;

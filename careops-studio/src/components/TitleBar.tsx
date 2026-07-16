@@ -16,6 +16,13 @@ export function TitleBar() {
   return (
     <header className="title-bar">
       <div className="title-bar__brand">
+        <img
+          className="title-bar__logo"
+          src="/humana-logo.png"
+          alt="Humana"
+          height={20}
+        />
+        <span className="title-bar__divider" aria-hidden />
         <div className="title-bar__names">
           <span className="title-bar__product">CareOps Studio</span>
           <span className="title-bar__project">hackathon-data</span>
