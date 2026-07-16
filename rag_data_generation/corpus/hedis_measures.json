@@ -1,0 +1,114 @@
+{
+  "measures": [
+    {
+      "measure_id": "AWC",
+      "full_name": "Annual Wellness Visit",
+      "description": "Members 18-64 who had at least one comprehensive well-care visit with a PCP in the measurement year.",
+      "denominator": "Commercial and Medicaid members age 18-64 continuously enrolled",
+      "numerator": "At least one well-care visit in the measurement year",
+      "closure_criteria": "Documentation of one comprehensive wellness visit billed under appropriate CPT/HCPCS codes",
+      "evidence_types": ["office_visit_note", "telehealth_visit", "AWV_claim"],
+      "valid_channels": ["Call Center", "IVR", "Web Form", "SMS", "Mail"],
+      "typical_outreach_reason": "No annual wellness visit on file for current measurement year"
+    },
+    {
+      "measure_id": "CBP",
+      "full_name": "Controlling Blood Pressure",
+      "description": "Members 18-85 with a diagnosis of hypertension whose most recent blood pressure was adequately controlled (<140/90 mmHg).",
+      "denominator": "Members 18-85 with a diagnosis of hypertension",
+      "numerator": "Most recent BP reading with systolic <140 and diastolic <90 mmHg",
+      "closure_criteria": "BP reading <140/90 mmHg documented in claims or clinical data within measurement year",
+      "evidence_types": ["lab_result", "office_visit_note", "remote_monitoring_device"],
+      "valid_channels": ["Call Center", "IVR", "Web Form", "SMS", "Mail"],
+      "typical_outreach_reason": "No qualifying BP reading on file; last recorded BP was above threshold"
+    },
+    {
+      "measure_id": "CDC-H",
+      "full_name": "Comprehensive Diabetes Care - HbA1c Control",
+      "description": "Members 18-75 with diabetes (T1 or T2) who had HbA1c tested and controlled (<8%) in the measurement year.",
+      "denominator": "Members 18-75 with T1 or T2 diabetes",
+      "numerator": "HbA1c test performed AND most recent result <8.0%",
+      "closure_criteria": "HbA1c lab result with value <8.0% within measurement year",
+      "evidence_types": ["lab_result", "office_visit_note"],
+      "valid_channels": ["Call Center", "IVR", "Web Form", "SMS", "Mail"],
+      "typical_outreach_reason": "No HbA1c test on file for current measurement year, or last result ≥8.0%"
+    },
+    {
+      "measure_id": "COA",
+      "full_name": "Care for Older Adults - Medication Review",
+      "description": "Members 66+ who had a medication review performed by a prescribing practitioner or clinical pharmacist in the measurement year.",
+      "denominator": "Members age 66 and older",
+      "numerator": "At least one medication review performed in measurement year",
+      "closure_criteria": "Medication review documented with appropriate CPT code during a qualifying visit",
+      "evidence_types": ["office_visit_note", "pharmacy_consult"],
+      "valid_channels": ["Call Center", "IVR", "Web Form", "SMS", "Mail"],
+      "typical_outreach_reason": "No medication review on file; member on 5+ medications (polypharmacy risk)"
+    },
+    {
+      "measure_id": "COL",
+      "full_name": "Colorectal Cancer Screening",
+      "description": "Members 45-75 who had appropriate colorectal cancer screening. Accepted screenings include colonoscopy, FIT, FOBT, stool DNA test, or CT colonography.",
+      "denominator": "Members age 45-75 continuously enrolled",
+      "numerator": "Colonoscopy (10 yr look-back), FIT/FOBT (1 yr), stool DNA (3 yr), CT colonography (5 yr)",
+      "closure_criteria": "Qualifying screening test documented within the required look-back period",
+      "evidence_types": ["procedure_record", "lab_result", "specialist_visit"],
+      "valid_channels": ["Call Center", "IVR", "Web Form", "SMS", "Mail"],
+      "typical_outreach_reason": "No qualifying colorectal screening on file within the required time window"
+    },
+    {
+      "measure_id": "FUH",
+      "full_name": "Follow-Up After Hospitalization for Mental Illness",
+      "description": "Members 6+ who were hospitalized for a mental illness or intentional self-harm and had a follow-up visit within 30 days of discharge.",
+      "denominator": "Members 6+ discharged from acute inpatient mental health facility",
+      "numerator": "Follow-up visit with mental health provider within 7 or 30 days of discharge",
+      "closure_criteria": "Documented outpatient mental health follow-up within 30 days of inpatient discharge",
+      "evidence_types": ["outpatient_mh_visit", "telehealth_mh_visit"],
+      "valid_channels": ["Call Center", "IVR", "SMS"],
+      "typical_outreach_reason": "No follow-up mental health visit within 30 days of hospital discharge"
+    },
+    {
+      "measure_id": "MRP",
+      "full_name": "Medication Reconciliation Post-Discharge",
+      "description": "Members 18+ discharged from acute or non-acute facility who had medications reconciled by a prescribing practitioner within 30 days of discharge.",
+      "denominator": "Members 18+ discharged from acute or non-acute inpatient setting",
+      "numerator": "Medication reconciliation performed within 30 days of discharge",
+      "closure_criteria": "Medication reconciliation note from a qualifying provider within 30 days of discharge",
+      "evidence_types": ["discharge_summary", "office_visit_note", "pharmacy_consult"],
+      "valid_channels": ["Call Center", "IVR", "SMS", "Mail"],
+      "typical_outreach_reason": "No medication reconciliation on file within 30 days post-discharge"
+    },
+    {
+      "measure_id": "OMW",
+      "full_name": "Osteoporosis Management in Women",
+      "description": "Women 67-85 who suffered a fracture and were either tested for osteoporosis (DXA scan) or treated with a bone-strengthening medication within 6 months of the fracture.",
+      "denominator": "Women 67-85 with a fracture in the first 6 months of the measurement year",
+      "numerator": "BMD/DXA scan OR osteoporosis medication dispensed within 6 months of fracture",
+      "closure_criteria": "DXA claim or osteoporosis Rx fill within 6 months of qualifying fracture",
+      "evidence_types": ["imaging_record", "pharmacy_fill"],
+      "valid_channels": ["Call Center", "IVR", "SMS", "Mail"],
+      "typical_outreach_reason": "Fracture on record but no DXA or bone-density medication within 6 months"
+    },
+    {
+      "measure_id": "SPC",
+      "full_name": "Statin Therapy for Patients with Cardiovascular Disease",
+      "description": "Males 21-75 and females 40-75 with clinical ASCVD who were dispensed at least one statin medication of moderate or high intensity in the measurement year.",
+      "denominator": "Members with clinical ASCVD (MI, stable/unstable angina, coronary revascularization, stroke, PVD)",
+      "numerator": "At least one statin Rx fill of moderate or high intensity in measurement year",
+      "closure_criteria": "Statin pharmacy fill of qualifying intensity on file for measurement year",
+      "evidence_types": ["pharmacy_fill"],
+      "valid_channels": ["Call Center", "IVR", "SMS", "Mail"],
+      "typical_outreach_reason": "No statin Rx on file despite clinical ASCVD diagnosis"
+    },
+    {
+      "measure_id": "TRC",
+      "full_name": "Transitions of Care",
+      "description": "Members 18+ discharged from acute inpatient facilities who had a timely discharge summary, medication reconciliation, and follow-up visit within defined windows.",
+      "denominator": "Members 18+ with an acute inpatient discharge",
+      "numerator": "All three: discharge summary transmitted, medication reconciliation, and follow-up visit within required timeframes",
+      "closure_criteria": "Documentation of all three TRC components within the required post-discharge windows",
+      "evidence_types": ["discharge_summary", "office_visit_note", "telehealth_visit", "pharmacy_consult"],
+      "valid_channels": ["Call Center", "IVR", "Web Form", "SMS", "Mail"],
+      "typical_outreach_reason": "Missing one or more TRC components post-discharge (no follow-up, no med rec, or no discharge summary)"
+    }
+  ]
+}
