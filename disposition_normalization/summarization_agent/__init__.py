@@ -1,0 +1,2 @@
+from .agent import disposition_summarization_agent
+root_agent = disposition_summarization_agent

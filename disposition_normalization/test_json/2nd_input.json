@@ -1,0 +1,165 @@
+{
+
+  "summary": "Member claims to have completed the Transitions of Care service approximately two months ago with Dr. Johnson. The agent has flagged this for the care coordination team to follow up with the provider for verification, as the completion is not yet reflected in their system.",
+
+  "interaction_type": "call",
+
+  "campaign_id": null,
+
+  "member_id": "MBR00150",
+
+  "gap_id": "GAP000413",
+
+  "measure_id": null,
+
+  "measure_name": "Transitions of Care",
+
+  "disposition_code": "Open - pending verification",
+
+  "attempt_number": null,
+
+  "interaction_date": "2026-06-10",
+
+  "provider_name": "Dr. Johnson",
+
+  "facility_name": null,
+
+  "service_completed": true,
+
+  "service_scheduled": false,
+
+  "member_refused": false,
+
+  "successful_contact": true,
+
+  "follow_up_requested": true,
+
+  "member_request": "Do I need to do anything?",
+
+  "evidence": [
+
+    "MEMBER: I think I already had that done. My doctor did something like that at my last visit.",
+
+    "MEMBER: Maybe two months ago? With Dr. Johnson downtown."
+
+  ],
+
+  "confidence": "medium"
+
+}
+
+{
+
+  "summary_type": "disposition",
+
+  "summary": "Member contacted for 'Transitions of Care' gap. Member claims service was completed by Dr. Johnson approximately two months ago. Agent could not verify and flagged for care coordination to follow up with the provider's office. The gap remains open pending verification.",
+
+  "full_context": "On 2026-06-10, an agent contacted member MBR00150 for an outbound care gap outreach regarding a 'Transitions of Care' measure (Gap ID: GAP000413). The member stated they believe the service was already completed about two months prior by 'Dr. Johnson downtown'. As the completion was not in the system, the agent informed the member they would flag the case for a care coordination team to follow up directly with the provider's office for confirmation. The agent advised that if confirmation is not received within 30 days, another follow-up call might be made. The CSR notes confirm the member's claim and that care coordination was notified, with the gap status remaining 'Open - pending verification'.",
+
+  "record_count": null,
+
+  "interaction_type": "call",
+
+  "campaign_id": null,
+
+  "member_id": "MBR00150",
+
+  "gap_id": "GAP000413",
+
+  "measure_id": null,
+
+  "measure_name": "Transitions of Care",
+
+  "disposition_code": "Open - pending verification",
+
+  "attempt_number": null,
+
+  "interaction_date": "2026-06-10",
+
+  "provider_name": "Dr. Johnson",
+
+  "facility_name": null,
+
+  "service_completed": null,
+
+  "service_scheduled": false,
+
+  "member_refused": false,
+
+  "successful_contact": true,
+
+  "follow_up_requested": true,
+
+  "member_request": "Member asked if they needed to take any action.",
+
+  "entities": [
+
+    "MBR00150",
+
+    "GAP000413",
+
+    "Transitions of Care",
+
+    "Dr. Johnson"
+
+  ],
+
+  "events": [
+
+    "Outbound call to member for care gap outreach.",
+
+    "Member claimed prior completion of service.",
+
+    "Agent initiated follow-up by care coordination team with provider.",
+
+    "Gap status remains open pending verification."
+
+  ],
+
+  "facts": [
+
+    "Interaction date was 2026-06-10.",
+
+    "Member ID is MBR00150.",
+
+    "Gap ID is GAP000413.",
+
+    "The care gap is for 'Transitions of Care'.",
+
+    "Member claims the service was completed approximately two months before the call.",
+
+    "The provider was identified by the member as Dr. Johnson.",
+
+    "An agent flagged the case for care coordination to follow up with the provider.",
+
+    "The gap's status is 'Open - pending verification'."
+
+  ],
+
+  "key_findings": [
+
+    "Member MBR00150 was contacted for a 'Transitions of Care' gap.",
+
+    "Member believes the service is already complete, but this is unverified.",
+
+    "Action was taken to have the care coordination team follow up with the provider, Dr. Johnson.",
+
+    "The care gap (GAP000413) remains open pending provider confirmation."
+
+  ],
+
+  "evidence": [
+
+    "MEMBER: I think I already had that done. My doctor did something like that at my last visit.",
+
+    "MEMBER: Maybe two months ago? With Dr. Johnson downtown.",
+
+    "AGENT: I'll flag this for our care coordination team to follow up directly with the provider's office.",
+
+    "CSR NOTES: Member MBR00150 claims Transitions of Care completed ~2 months ago with Dr. Johnson. Cannot verify. Care coordination notified. Gap status: Open - pending verification."
+
+  ],
+
+  "confidence": "high"
+
+}
