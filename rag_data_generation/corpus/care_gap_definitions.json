@@ -1,0 +1,113 @@
+{
+  "member_id_format": "MBR00001 through MBR00200 (zero-padded 5-digit suffix)",
+  "provider_id_format": "PRV0001 through PRV0050 (zero-padded 4-digit suffix)",
+  "campaign_id_format": "CAMP-{MEASURE_ID}-{YEAR}-Q{QUARTER}  e.g., CAMP-COL-2026-Q1",
+  "gap_id_format": "GAP000001 through GAP000999",
+
+  "source_type_to_channel_mapping": {
+    "call_transcript": {
+      "system_channel": "Call Center",
+      "action_taken_field": "CSR_OUTREACH",
+      "description": "Full verbatim or paraphrased call transcript between CSR/nurse and member",
+      "format_guidance": "Multi-turn dialogue with AGENT: and MEMBER: turns, 4-12 lines, ends with bracketed summary and CSR_NOTES field"
+    },
+    "ivr_result_code": {
+      "system_channel": "IVR",
+      "action_taken_field": "IVR_RESULT",
+      "description": "Structured IVR event log with member interaction codes",
+      "format_guidance": "JSON-like object with: ivr_session_id, member_id, gap_id, measure_id, call_date, ivr_tree_path (array of options selected), raw_result_code, duration_seconds, transferred_to"
+    },
+    "csr_note": {
+      "system_channel": "Call Center",
+      "action_taken_field": "CSR_OUTREACH",
+      "description": "Short free-text note entered by a CSR after a call or interaction",
+      "format_guidance": "1-4 sentences of plain prose; may include shorthand codes like WN, VM, SCHED; often has date/member context"
+    },
+    "web_form": {
+      "system_channel": "Web Form",
+      "action_taken_field": "WEB_SELF_SERVICE",
+      "description": "Structured web portal submission or partial submission from member self-service",
+      "format_guidance": "JSON-like object with: submission_id, member_id, gap_id, measure_id, submitted_at, form_version, fields_completed, completion_status (COMPLETE/PARTIAL/ABANDONED), member_responses (object)"
+    }
+  },
+
+  "care_gap_status_rules": {
+    "closed": {
+      "conditions": [
+        "Service is confirmed completed with supporting claim, lab result, or verified provider documentation",
+        "action_taken must be 'already_completed' (verified)",
+        "responded must be true"
+      ],
+      "notes": "Self-reported completion WITHOUT claim verification does NOT qualify for closed status"
+    },
+    "attempted_not_closed": {
+      "conditions": [
+        "Member was reached (responded=true) but gap cannot yet be credited",
+        "Includes: scheduled_appt, refused, callback_requested, language_barrier, opted_out, already_completed_unverified, pending_followup, partial_web_submission, web_self_report, engaged_sms"
+      ],
+      "notes": "Most common outcome in outreach campaigns; gap stays open in system"
+    },
+    "open_no_contact": {
+      "conditions": [
+        "Outreach was attempted but member was NOT reached (responded=false)",
+        "Includes: left_voicemail, no_action, mail_delivered (no reply), SMS no-response, SMS invalid number"
+      ],
+      "notes": "Gap remains open; member not engaged"
+    },
+    "invalid": {
+      "conditions": [
+        "The record itself is not processable for gap management",
+        "Includes: wrong_number, excluded (deceased/hospice/disenrolled), address_invalid"
+      ],
+      "notes": "TRICKY EDGE: If member is deceased, ALL open gaps for that member should be invalidated"
+    }
+  },
+
+  "tricky_edge_cases": [
+    {
+      "case": "Unverified self-report",
+      "description": "Member says 'I already had that done' but no claim on file. Do NOT close gap. Use DISP-COMP-UV with care_gap_status=attempted_not_closed.",
+      "correct_action": "already_completed_unverified",
+      "correct_status": "attempted_not_closed",
+      "common_error": "Incorrectly marking as closed based on member assertion alone"
+    },
+    {
+      "case": "IVR code contradicts transcript",
+      "description": "IVR raw_code shows 'Member confirmed appointment scheduled' but transcript or CSR note indicates member actually refused.",
+      "correct_action": "refused",
+      "correct_status": "attempted_not_closed",
+      "common_error": "Trusting IVR code over narrative content"
+    },
+    {
+      "case": "Wrong number vs. deceased",
+      "description": "Wrong number at first seems like wrong_number (invalid) but call with next of kin reveals member is deceased.",
+      "correct_action": "excluded",
+      "correct_status": "invalid",
+      "correct_disposition_code": "DISP-EXCL",
+      "common_error": "Coding as DISP-WN instead of DISP-EXCL"
+    },
+    {
+      "case": "Partial web form with self-reported completion",
+      "description": "PARTIAL_SUBMIT status but member_responses field contains claim of service completion.",
+      "correct_action": "already_completed_unverified",
+      "correct_status": "attempted_not_closed",
+      "confidence": 0.45,
+      "common_error": "Treating PARTIAL_SUBMIT automatically as no-data; missing the embedded self-report"
+    },
+    {
+      "case": "Language barrier with appointment booked by interpreter",
+      "description": "Language barrier encountered, transferred to interpreter who then booked an appointment.",
+      "correct_action": "scheduled_appt",
+      "correct_status": "attempted_not_closed",
+      "common_error": "Coding as language_barrier only and missing the appointment booking"
+    },
+    {
+      "case": "SMS REPLIED_YES without specifics",
+      "description": "Member replied YES to SMS but prompt was ambiguous — could mean consent to be called OR confirmation of service completion.",
+      "correct_action": "engaged_sms",
+      "correct_status": "attempted_not_closed",
+      "confidence": 0.55,
+      "common_error": "Treating REPLIED_YES as service confirmation and closing the gap"
+    }
+  ]
+}
