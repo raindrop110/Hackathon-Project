@@ -1,0 +1,212 @@
+{
+  "disposition_codes": [
+    {
+      "code": "DISP-CLOSED",
+      "label": "Gap Closed — Service Verified",
+      "description": "Service was completed and claim/documentation is on file; gap can be credited in the system",
+      "maps_to_action": "already_completed",
+      "care_gap_status": "closed",
+      "responded": true,
+      "confidence_floor": 0.85,
+      "example_triggers": [
+        "Member has a claim on file matching the measure numerator criteria",
+        "Provider submitted encounter showing completed service",
+        "Lab result satisfying numerator received"
+      ]
+    },
+    {
+      "code": "DISP-SCHED",
+      "label": "Appointment Scheduled",
+      "description": "Member has confirmed appointment scheduled; gap not yet closeable until service is completed",
+      "maps_to_action": "scheduled_appt",
+      "care_gap_status": "attempted_not_closed",
+      "responded": true,
+      "confidence_floor": 0.75,
+      "example_triggers": [
+        "CSR confirms appointment in scheduling system",
+        "Member reports upcoming appointment date",
+        "IVR code: Member confirmed appointment scheduled"
+      ]
+    },
+    {
+      "code": "DISP-COMP-UV",
+      "label": "Member Claims Completion — Unverified",
+      "description": "Member states the service was completed but no supporting claim or documentation exists in the system",
+      "maps_to_action": "already_completed_unverified",
+      "care_gap_status": "attempted_not_closed",
+      "responded": true,
+      "confidence_floor": 0.50,
+      "example_triggers": [
+        "Member says 'I already had that done' but no claim on file",
+        "IVR code: Member stated already completed",
+        "CSR note: Member insists colonoscopy done at out-of-network facility"
+      ]
+    },
+    {
+      "code": "DISP-REFUS",
+      "label": "Member Refused",
+      "description": "Member was reached and explicitly declined the service or outreach",
+      "maps_to_action": "refused",
+      "care_gap_status": "attempted_not_closed",
+      "responded": true,
+      "confidence_floor": 0.80,
+      "example_triggers": [
+        "Member declined — not interested (IVR)",
+        "REFUSED (CSR outreach)",
+        "Member stated they do not want the service"
+      ]
+    },
+    {
+      "code": "DISP-VM",
+      "label": "Voicemail Left",
+      "description": "No live member contact; voicemail message left",
+      "maps_to_action": "left_voicemail",
+      "care_gap_status": "open_no_contact",
+      "responded": false,
+      "confidence_floor": 0.90,
+      "example_triggers": [
+        "No answer / voicemail (IVR)",
+        "VM_LEFT (CSR outreach)",
+        "CSR left voicemail message"
+      ]
+    },
+    {
+      "code": "DISP-NOCON",
+      "label": "No Contact — No Message Left",
+      "description": "Outreach attempted but no member contact and no message left",
+      "maps_to_action": "no_action",
+      "care_gap_status": "open_no_contact",
+      "responded": false,
+      "confidence_floor": 0.90,
+      "example_triggers": [
+        "NO_ANSWER (CSR)",
+        "Disconnected (IVR)",
+        "SMS INVALID_NUM or NO_RESPONSE",
+        "Mail NO_RESPONSE"
+      ]
+    },
+    {
+      "code": "DISP-LANG",
+      "label": "Language Barrier",
+      "description": "Member reached but communication barrier prevented full outreach; transfer or multilingual follow-up needed",
+      "maps_to_action": "language_barrier",
+      "care_gap_status": "attempted_not_closed",
+      "responded": true,
+      "confidence_floor": 0.85,
+      "example_triggers": [
+        "LANG_BARRIER (CSR outreach)",
+        "Language barrier — transferred (IVR)",
+        "Member spoke only Spanish; transferred to interpreter line"
+      ]
+    },
+    {
+      "code": "DISP-WN",
+      "label": "Wrong Number / Invalid Contact",
+      "description": "Phone number on file does not reach the member; contact info needs updating",
+      "maps_to_action": "wrong_number",
+      "care_gap_status": "invalid",
+      "responded": false,
+      "confidence_floor": 0.90,
+      "example_triggers": [
+        "Wrong number (IVR)",
+        "WN (CSR outreach)",
+        "Person who answered is not member"
+      ]
+    },
+    {
+      "code": "DISP-ADDR",
+      "label": "Address Invalid / Mail Returned",
+      "description": "Mail returned undeliverable; address on file is incorrect or member moved",
+      "maps_to_action": "no_action",
+      "care_gap_status": "invalid",
+      "responded": false,
+      "confidence_floor": 0.90,
+      "example_triggers": [
+        "RETURNED_UNDELIVERABLE (Mail outreach)"
+      ]
+    },
+    {
+      "code": "DISP-OPTOUT",
+      "label": "Member Opted Out",
+      "description": "Member opted out of this outreach channel (SMS STOP, IVR opt-out, do-not-call registry)",
+      "maps_to_action": "opted_out",
+      "care_gap_status": "attempted_not_closed",
+      "responded": true,
+      "confidence_floor": 0.90,
+      "example_triggers": [
+        "OPT_OUT (SMS)",
+        "Member requested no further contact via this channel"
+      ]
+    },
+    {
+      "code": "DISP-CB",
+      "label": "Callback Scheduled",
+      "description": "Member requested or agreed to a follow-up call from a live agent",
+      "maps_to_action": "callback_requested",
+      "care_gap_status": "attempted_not_closed",
+      "responded": true,
+      "confidence_floor": 0.85,
+      "example_triggers": [
+        "Member requested callback (IVR)",
+        "CB_SCHED (CSR outreach)",
+        "Member agreed to call back next week"
+      ]
+    },
+    {
+      "code": "DISP-EXCL",
+      "label": "Member Excluded",
+      "description": "Member meets exclusion criteria: deceased, hospice, disenrolled, or moved out of service area",
+      "maps_to_action": "excluded",
+      "care_gap_status": "invalid",
+      "responded": false,
+      "confidence_floor": 0.95,
+      "example_triggers": [
+        "Member deceased",
+        "Member in hospice care",
+        "Member disenrolled from plan",
+        "RETURNED_UNDELIVERABLE with no forwarding address + disenrollment confirmed"
+      ]
+    },
+    {
+      "code": "DISP-PEND",
+      "label": "Pending — Action in Progress",
+      "description": "Outreach resulted in a partial action; follow-up required to confirm closure",
+      "maps_to_action": "pending_followup",
+      "care_gap_status": "attempted_not_closed",
+      "responded": true,
+      "confidence_floor": 0.60,
+      "example_triggers": [
+        "Member claims completion but provider confirmation pending",
+        "Appointment scheduled but not yet confirmed in system",
+        "FORM_SUBMITTED but incomplete data"
+      ]
+    },
+    {
+      "code": "DISP-WEB-PART",
+      "label": "Web Form Partial Submission",
+      "description": "Member started web form self-report but did not complete; data is incomplete",
+      "maps_to_action": "partial_web_submission",
+      "care_gap_status": "attempted_not_closed",
+      "responded": true,
+      "confidence_floor": 0.40,
+      "example_triggers": [
+        "PARTIAL_SUBMIT (Web Self Service)",
+        "ABANDONED (Web Self Service)",
+        "Member reached step 2 of 4 in web form"
+      ]
+    },
+    {
+      "code": "DISP-WEB-COMP",
+      "label": "Web Form Complete — Pending Verification",
+      "description": "Member completed web self-report form; self-reported completion awaits claim verification",
+      "maps_to_action": "web_self_report",
+      "care_gap_status": "attempted_not_closed",
+      "responded": true,
+      "confidence_floor": 0.65,
+      "example_triggers": [
+        "FORM_SUBMITTED (Web Self Service) with all required fields",
+        "Member self-reported completion via web portal"
+      ]
+    }
+  ]
+}

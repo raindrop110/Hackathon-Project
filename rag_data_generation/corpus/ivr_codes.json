@@ -1,0 +1,147 @@
+{
+  "ivr_result_codes": [
+    {
+      "raw_code": "Member confirmed appointment scheduled",
+      "normalized_code": "IVR-SCHED",
+      "description": "Member interacted with IVR and confirmed an appointment is already scheduled with a provider",
+      "maps_to_action": "scheduled_appt",
+      "care_gap_status": "attempted_not_closed",
+      "responded": true,
+      "notes": "Gap remains open until appointment is completed and documented; set to attempted_not_closed"
+    },
+    {
+      "raw_code": "Member stated already completed",
+      "normalized_code": "IVR-COMP",
+      "description": "Member self-reported that the service has already been completed but no claim on file",
+      "maps_to_action": "already_completed_unverified",
+      "care_gap_status": "attempted_not_closed",
+      "responded": true,
+      "notes": "TRICKY: cannot close gap without claim verification; keep as attempted_not_closed pending provider confirmation"
+    },
+    {
+      "raw_code": "Member declined — not interested",
+      "normalized_code": "IVR-DECL",
+      "description": "Member actively declined the service or chose opt-out option in IVR menu",
+      "maps_to_action": "refused",
+      "care_gap_status": "attempted_not_closed",
+      "responded": true,
+      "notes": "Member was reached; gap not closeable without service completion"
+    },
+    {
+      "raw_code": "No answer / voicemail",
+      "normalized_code": "IVR-VM",
+      "description": "IVR call connected but no live member interaction; automated voicemail left",
+      "maps_to_action": "left_voicemail",
+      "care_gap_status": "open_no_contact",
+      "responded": false,
+      "notes": "No member engagement; gap remains open"
+    },
+    {
+      "raw_code": "Disconnected",
+      "normalized_code": "IVR-DISC",
+      "description": "Call was dropped or phone disconnected before member interaction",
+      "maps_to_action": "no_action",
+      "care_gap_status": "open_no_contact",
+      "responded": false,
+      "notes": "Technical failure; no contact made"
+    },
+    {
+      "raw_code": "Wrong number",
+      "normalized_code": "IVR-WN",
+      "description": "Person who answered is not the member; wrong number on file",
+      "maps_to_action": "wrong_number",
+      "care_gap_status": "invalid",
+      "responded": false,
+      "notes": "Invalid contact; update member phone record; do not count as contact attempt against member"
+    },
+    {
+      "raw_code": "Member requested callback",
+      "normalized_code": "IVR-CBR",
+      "description": "Member requested transfer to a live agent or a scheduled callback",
+      "maps_to_action": "callback_requested",
+      "care_gap_status": "attempted_not_closed",
+      "responded": true,
+      "notes": "Member engaged; follow-up required by live agent"
+    },
+    {
+      "raw_code": "Language barrier — transferred",
+      "normalized_code": "IVR-LANG",
+      "description": "Member could not communicate in available IVR language; transferred to interpreter service",
+      "maps_to_action": "language_barrier",
+      "care_gap_status": "attempted_not_closed",
+      "responded": true,
+      "notes": "Member reached but communication barrier; flag for multilingual outreach"
+    }
+  ],
+  "sms_result_codes": [
+    {
+      "raw_code": "REPLIED_YES",
+      "normalized_code": "SMS-YES",
+      "description": "Member replied YES or affirmative to SMS prompt",
+      "maps_to_action": "engaged_sms",
+      "care_gap_status": "attempted_not_closed",
+      "responded": true
+    },
+    {
+      "raw_code": "REPLIED_NO",
+      "normalized_code": "SMS-NO",
+      "description": "Member replied NO or opted out via SMS",
+      "maps_to_action": "refused",
+      "care_gap_status": "attempted_not_closed",
+      "responded": true
+    },
+    {
+      "raw_code": "OPT_OUT",
+      "normalized_code": "SMS-OPT",
+      "description": "Member replied STOP or similar opt-out keyword; must not be re-texted",
+      "maps_to_action": "opted_out_sms",
+      "care_gap_status": "attempted_not_closed",
+      "responded": true,
+      "notes": "Mark member do-not-contact via SMS; use alternative channel"
+    },
+    {
+      "raw_code": "INVALID_NUM",
+      "normalized_code": "SMS-INV",
+      "description": "SMS delivery failed; number is invalid, landline, or deactivated",
+      "maps_to_action": "no_action",
+      "care_gap_status": "open_no_contact",
+      "responded": false
+    },
+    {
+      "raw_code": "NO_RESPONSE",
+      "normalized_code": "SMS-NR",
+      "description": "SMS delivered but member did not respond within the response window",
+      "maps_to_action": "no_action",
+      "care_gap_status": "open_no_contact",
+      "responded": false
+    }
+  ],
+  "mail_result_codes": [
+    {
+      "raw_code": "DELIVERED",
+      "normalized_code": "MAIL-DEL",
+      "description": "Mail piece confirmed delivered to address on file",
+      "maps_to_action": "mail_delivered",
+      "care_gap_status": "open_no_contact",
+      "responded": false,
+      "notes": "Delivery does not equal engagement; no member response tracked"
+    },
+    {
+      "raw_code": "RETURNED_UNDELIVERABLE",
+      "normalized_code": "MAIL-RET",
+      "description": "Mail returned as undeliverable; address likely incorrect or member moved",
+      "maps_to_action": "no_action",
+      "care_gap_status": "open_no_contact",
+      "responded": false,
+      "notes": "Flag member address for update; potential disenrollment risk"
+    },
+    {
+      "raw_code": "NO_RESPONSE",
+      "normalized_code": "MAIL-NR",
+      "description": "Mail delivered but no response received within expected window",
+      "maps_to_action": "no_action",
+      "care_gap_status": "open_no_contact",
+      "responded": false
+    }
+  ]
+}
