@@ -61,7 +61,7 @@ If no care gap was found by either method, return exactly this JSON structure:
 
 root_agent = LlmAgent(
     name="data_connection_agent",
-    model="gemini-2.0-flash",
+    model="gemini-2.5-pro",
     description=(
         "Receives a campaign_disposition JSON row, looks up the matching care_gap record "
         "by gap_id (with member+measure fallback), and returns both joined together. "

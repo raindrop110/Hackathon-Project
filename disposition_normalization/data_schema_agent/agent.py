@@ -53,7 +53,7 @@ return a top-level JSON object with one key per dataset name, each containing it
 
 root_agent = LlmAgent(
     name="data_schema_agent",
-    model="gemini-2.0-flash",
+    model="gemini-2.5-pro",
     description=(
         "Transforms unstructured healthcare JSON input into structured JSON rows "
         "matching standardized data schemas, using RAG over structured CSVs to ground "
