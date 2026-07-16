@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Environment / secrets
+.env
+*.env
+!.env.example
+
+# Google ADK local state
+.adk/
+**/.adk/session.db
+
+# OS
+.DS_Store
