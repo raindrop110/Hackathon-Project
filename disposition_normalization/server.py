@@ -139,8 +139,8 @@ def _run_orchestrator_sync(
 ) -> dict[str, object]:
     """Run the GADK orchestrator synchronously in a thread.
 
-    Intercepts events by author so we can emit per-agent SSE stages
-    without breaking the single-Runner GADK pattern.
+    Intercepts each AgentTool call/response pair so we can emit per-agent SSE
+    stages without breaking the single-Runner GADK pattern.
     Session is pre-created in async context and passed in to avoid awaiting here.
     """
     runner = Runner(
@@ -168,32 +168,37 @@ def _run_orchestrator_sync(
             error_code = f"{event.error_code}: {getattr(event, 'error_message', '')}"
 
         author: str = getattr(event, "author", "") or ""
-        stage = _AGENT_STAGE.get(author)
 
-        # Emit stage_start when we first see a sub-agent event
-        if stage and stage not in stages_started:
-            stages_started.add(stage)
-            emit({"type": "stage_start", "stageId": stage, "message": f"{author} is processing…"})
+        # AgentTool runs each sub-agent in its own private nested Runner and never
+        # surfaces that sub-agent's internal events to this top-level loop — every
+        # event we see here is authored by the orchestrator itself. The only trace
+        # of a sub-agent invocation at this level is the orchestrator's own
+        # function_call (tool invoked) / function_response (tool returned) parts,
+        # named after the tool (== the sub-agent's name), so we key off those
+        # instead of event.author.
+        for call in event.get_function_calls():
+            stage = _AGENT_STAGE.get(call.name)
+            if stage and stage not in stages_started:
+                stages_started.add(stage)
+                emit({"type": "stage_start", "stageId": stage, "message": f"{call.name} is processing…"})
 
-        # Emit stage_complete when a sub-agent emits its final response
-        if stage and event.is_final_response() and stage not in stages_completed:
-            stages_completed.add(stage)
-            text = ""
-            if event.content and event.content.parts:
-                for part in event.content.parts:
-                    if hasattr(part, "text") and part.text:
-                        text += part.text
-            try:
-                result = json.loads(text.strip())
-            except json.JSONDecodeError:
-                result = {"raw": text.strip()}
-            agent_results[stage] = result
-            emit({
-                "type": "stage_complete",
-                "stageId": stage,
-                "message": f"{stage.replace('_', ' ').title()} complete",
-                "result": result,
-            })
+        for resp in event.get_function_responses():
+            stage = _AGENT_STAGE.get(resp.name)
+            if stage and stage not in stages_completed:
+                stages_completed.add(stage)
+                raw = (resp.response or {}).get("result", "")
+                text = raw if isinstance(raw, str) else json.dumps(raw)
+                try:
+                    result = json.loads(text.strip())
+                except (json.JSONDecodeError, AttributeError):
+                    result = {"raw": text}
+                agent_results[stage] = result
+                emit({
+                    "type": "stage_complete",
+                    "stageId": stage,
+                    "message": f"{stage.replace('_', ' ').title()} complete",
+                    "result": result,
+                })
 
         # Orchestrator itself finished — flush any stages that never fired
         # (guards against GADK versions that don't surface AgentTool sub-events).
