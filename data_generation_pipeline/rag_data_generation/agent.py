@@ -29,7 +29,7 @@ from dotenv import load_dotenv
 from google.adk.agents import LlmAgent, SequentialAgent
 
 from .db_agent import save_to_json_db
-from .schemas import DatasetSummary, GeneratedDataset, ValidatedDataset
+from .schemas import DatasetSummary, GeneratedDataset, LearnedPattern, ValidatedDataset
 from .tools import build_corpus_context
 
 load_dotenv()
@@ -41,6 +41,12 @@ load_dotenv()
 MODEL = "gemini-2.5-flash"  # change this constant to switch models globally
 BATCH_SIZE: int = int(os.getenv("BATCH_SIZE", "5"))
 
+# Sentinel substituted via str.replace() rather than f-string/str.format() —
+# corpus_context (and, for the extractor agent below, raw uploaded file text)
+# can itself contain literal `{`/`}` characters, and .format() would try to
+# parse those as fields. .replace() only ever touches this exact sentinel.
+_CORPUS_CONTEXT_PLACEHOLDER = "__CORPUS_CONTEXT_PLACEHOLDER__"
+
 # Pre-load full corpus context once at import time.
 # SWAP SEAM: remove this line when Vertex AI RAG is wired up.
 _CORPUS_CONTEXT: str = build_corpus_context()
@@ -50,7 +56,7 @@ _CORPUS_CONTEXT: str = build_corpus_context()
 # Agent 1 — Generate Data Agent
 # ---------------------------------------------------------------------------
 
-_GENERATE_INSTRUCTION = f"""
+_GENERATE_INSTRUCTION_TEMPLATE = f"""
 You are a synthetic healthcare data generator specialising in Medicare/Medicaid care-gap
 outreach disposition records.
 
@@ -65,10 +71,16 @@ normalized disposition (the ground-truth label).
 Write your output to state key "generated_data".
 
 ═══════════════════════════════════════════════════════════
-REFERENCE CORPUS (pre-loaded from local JSON files;
+REFERENCE CORPUS (pre-loaded from local JSON files, including any patterns learned
+from real uploaded files — see "learned_patterns" below if present;
 in production this will come from a Vertex AI RAG Engine corpus)
 ═══════════════════════════════════════════════════════════
-{_CORPUS_CONTEXT}
+{_CORPUS_CONTEXT_PLACEHOLDER}
+
+If a "learned_patterns" section is present, treat its entries as real-world texture
+to weave into your synthetic records — favor their phrasing/structural conventions
+and edge cases over inventing your own, since they reflect files the team actually
+uploaded.
 
 ═══════════════════════════════════════════════════════════
 GENERATION RULES
@@ -153,15 +165,17 @@ batch_id format: BATCH-YYYYMMDD-HHMMSS  (use a plausible 2026 datetime)
 generated_at format: ISO-8601 UTC string
 """
 
+_GENERATE_DATA_AGENT_DESCRIPTION = (
+    "Synthesises a batch of realistic synthetic care-gap outreach disposition records "
+    "across all four source types, with correct ground-truth normalised labels, "
+    "grounded in the HEDIS/IVR/disposition code corpus."
+)
+
 generate_data_agent = LlmAgent(
     name="generate_data_agent",
     model=MODEL,
-    description=(
-        "Synthesises a batch of realistic synthetic care-gap outreach disposition records "
-        "across all four source types, with correct ground-truth normalised labels, "
-        "grounded in the HEDIS/IVR/disposition code corpus."
-    ),
-    instruction=_GENERATE_INSTRUCTION,
+    description=_GENERATE_DATA_AGENT_DESCRIPTION,
+    instruction=_GENERATE_INSTRUCTION_TEMPLATE.replace(_CORPUS_CONTEXT_PLACEHOLDER, _CORPUS_CONTEXT),
     output_key="generated_data",
     output_schema=GeneratedDataset,
     # No tools here — output_schema + tools cannot coexist on the same LlmAgent in ADK.
@@ -261,14 +275,16 @@ validated_at: ISO-8601 UTC string (a few seconds after generated_at)
 Counts must correctly reflect the validation_status values in the records array.
 """
 
+_SME_VALIDATOR_AGENT_DESCRIPTION = (
+    "Clinical/business SME agent that reads generated disposition records, "
+    "validates measure codes, disposition codes, and status coherence against "
+    "the corpus, then fixes or flags each record with validation_status and notes."
+)
+
 sme_validator_agent = LlmAgent(
     name="sme_validator_agent",
     model=MODEL,
-    description=(
-        "Clinical/business SME agent that reads generated disposition records, "
-        "validates measure codes, disposition codes, and status coherence against "
-        "the corpus, then fixes or flags each record with validation_status and notes."
-    ),
+    description=_SME_VALIDATOR_AGENT_DESCRIPTION,
     instruction=_VALIDATE_INSTRUCTION,
     output_key="validated_data",
     output_schema=ValidatedDataset,
@@ -339,14 +355,16 @@ For by_care_gap_measure, use the field name "CDC_H" (with underscore) for CDC-H 
 All other measure keys use their standard abbreviation (AWC, CBP, COA, COL, etc.).
 """
 
+_SUMMARY_GENERATOR_AGENT_DESCRIPTION = (
+    "Analytics agent that reads validated disposition records and produces "
+    "aggregate statistics by source type, measure, and outcome — plus edge-case "
+    "identification — for consumption by the downstream Comparison step."
+)
+
 summary_generator_agent = LlmAgent(
     name="summary_generator_agent",
     model=MODEL,
-    description=(
-        "Analytics agent that reads validated disposition records and produces "
-        "aggregate statistics by source type, measure, and outcome — plus edge-case "
-        "identification — for consumption by the downstream Comparison step."
-    ),
+    description=_SUMMARY_GENERATOR_AGENT_DESCRIPTION,
     instruction=_SUMMARY_INSTRUCTION,
     output_key="dataset_summary",
     output_schema=DatasetSummary,
@@ -376,3 +394,150 @@ root_agent = SequentialAgent(
     ],
     after_agent_callback=save_to_json_db,
 )
+
+
+# ---------------------------------------------------------------------------
+# Pattern Extractor Agent — the feedback half of the upload → corpus →
+# generation loop. Given one real uploaded file, decides whether it
+# demonstrates a generation pattern the corpus doesn't already know about.
+# See pipeline_runner.py for the orchestration that calls this on every
+# upload and persists novel patterns via tools.append_learned_pattern.
+# ---------------------------------------------------------------------------
+
+_EXTRACT_PATTERN_INSTRUCTION_TEMPLATE = """
+You are a data-generation SME studying a real healthcare outreach file to improve a
+synthetic data generator.
+
+═══════════════════════════════════════════════════════════
+SINGLE RESPONSIBILITY
+═══════════════════════════════════════════════════════════
+You will be shown ONE real uploaded file (raw text, possibly truncated) plus the
+generator's CURRENT reference corpus (including patterns already learned from previous
+uploads). Decide whether this file demonstrates a structural or stylistic pattern that
+is genuinely NEW relative to that corpus — something the synthetic generator does not
+already know how to produce.
+
+Write your output to state key "learned_pattern".
+
+═══════════════════════════════════════════════════════════
+CURRENT CORPUS (static reference data + previously learned patterns)
+═══════════════════════════════════════════════════════════
+__CORPUS_CONTEXT_PLACEHOLDER__
+
+═══════════════════════════════════════════════════════════
+WHAT COUNTS AS NOVEL
+═══════════════════════════════════════════════════════════
+Novel (is_novel = true):
+  - A phrasing convention, shorthand, or formatting style not already captured
+  - A new realistic edge case (ambiguous outcome, unusual channel behavior, novel
+    failure mode) not already in care_gap_definitions or previously learned patterns
+  - A structural variation of one of the four source types not yet represented
+
+NOT novel (is_novel = false):
+  - The file is a close match to patterns already in the corpus or learned_patterns
+  - The file is empty, garbled, or contains no discernible outreach-disposition content
+  - The only difference from existing patterns is specific names/IDs/dates (that's not
+    a structural pattern, that's just different data)
+
+═══════════════════════════════════════════════════════════
+PRIVACY / GENERALIZATION RULE — CRITICAL
+═══════════════════════════════════════════════════════════
+Never copy verbatim member names, member IDs, phone numbers, addresses, or exact dates
+from the source file into pattern_summary or style_notes. Describe the STRUCTURE and
+STYLE only, in generic terms a generator could apply to ANY member. If you need an
+example, invent a generic placeholder (e.g. "MBR#####") — never reuse the real value.
+
+═══════════════════════════════════════════════════════════
+SOURCE FILE
+═══════════════════════════════════════════════════════════
+Filename: __FILENAME_PLACEHOLDER__
+Content (verbatim, may be truncated):
+---
+__FILE_CONTENT_PLACEHOLDER__
+---
+
+═══════════════════════════════════════════════════════════
+OUTPUT FORMAT
+═══════════════════════════════════════════════════════════
+Return ONLY a valid JSON object matching the LearnedPattern schema.
+Do NOT include markdown fences, commentary, or extra keys.
+pattern_id: leave as "LP-000000" — the caller assigns the real ID.
+extracted_from: leave as "" — the caller fills this in.
+extracted_at: leave as "" — the caller fills this in.
+"""
+
+_PATTERN_EXTRACTOR_AGENT_DESCRIPTION = (
+    "Reads a real uploaded file and decides whether it demonstrates a "
+    "generation pattern not already known to the synthetic data generator."
+)
+
+
+def build_pattern_extractor_agent(filename: str, file_content: str) -> LlmAgent:
+    """Fresh per-call: rereads the corpus (incl. learned_patterns.json) from disk so
+    novelty is judged against the latest state, then grounds the extraction in the
+    real uploaded file passed in by the caller.
+
+    filename/file_content may themselves contain literal `{`/`}` (e.g. IVR/web-form
+    raw payloads are JSON-like) — sanitize them the same way build_corpus_context
+    sanitizes the corpus, then splice everything in via str.replace() so nothing is
+    ever mistaken for an ADK session-state template reference.
+    """
+    corpus_context = build_corpus_context(force_reload=True)
+    safe_content = file_content.replace("{", "｛").replace("}", "｝")
+    instruction = (
+        _EXTRACT_PATTERN_INSTRUCTION_TEMPLATE
+        .replace(_CORPUS_CONTEXT_PLACEHOLDER, corpus_context)
+        .replace("__FILENAME_PLACEHOLDER__", filename)
+        .replace("__FILE_CONTENT_PLACEHOLDER__", safe_content)
+    )
+    return LlmAgent(
+        name="pattern_extractor_agent",
+        model=MODEL,
+        description=_PATTERN_EXTRACTOR_AGENT_DESCRIPTION,
+        instruction=instruction,
+        output_key="learned_pattern",
+        output_schema=LearnedPattern,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Fresh-pipeline factory — rebuilds the 3-stage SequentialAgent with a
+# generate_data_agent grounded in the CURRENT corpus (including whatever
+# pattern_extractor_agent just learned). ADK agents can only belong to one
+# parent, so every sub-agent is rebuilt rather than reusing the module-level
+# singletons above (those stay exactly as-is for `adk web`/`adk run`).
+# ---------------------------------------------------------------------------
+
+
+def build_generation_pipeline() -> SequentialAgent:
+    corpus_context = build_corpus_context(force_reload=True)
+    fresh_generate_agent = LlmAgent(
+        name="generate_data_agent",
+        model=MODEL,
+        description=_GENERATE_DATA_AGENT_DESCRIPTION,
+        instruction=_GENERATE_INSTRUCTION_TEMPLATE.replace(_CORPUS_CONTEXT_PLACEHOLDER, corpus_context),
+        output_key="generated_data",
+        output_schema=GeneratedDataset,
+    )
+    fresh_sme_validator_agent = LlmAgent(
+        name="sme_validator_agent",
+        model=MODEL,
+        description=_SME_VALIDATOR_AGENT_DESCRIPTION,
+        instruction=_VALIDATE_INSTRUCTION,
+        output_key="validated_data",
+        output_schema=ValidatedDataset,
+    )
+    fresh_summary_generator_agent = LlmAgent(
+        name="summary_generator_agent",
+        model=MODEL,
+        description=_SUMMARY_GENERATOR_AGENT_DESCRIPTION,
+        instruction=_SUMMARY_INSTRUCTION,
+        output_key="dataset_summary",
+        output_schema=DatasetSummary,
+    )
+    return SequentialAgent(
+        name="rag_data_generation",
+        description=root_agent.description,
+        sub_agents=[fresh_generate_agent, fresh_sme_validator_agent, fresh_summary_generator_agent],
+        after_agent_callback=save_to_json_db,
+    )

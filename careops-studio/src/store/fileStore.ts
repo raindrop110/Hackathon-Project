@@ -7,13 +7,17 @@ interface FileStore {
   nodes: TreeNode[];
   selectedId: string | null;
   query: string;
+  /** In-browser text content for uploaded files, keyed by node id (uploads have no disk path to read back). */
+  uploadedContent: Record<string, string>;
   select: (id: string | null) => void;
   setQuery: (q: string) => void;
   toggleFolder: (id: string) => void;
   collapseAll: () => void;
   expandAll: () => void;
   addUploadedFiles: (files: File[]) => FileNode[];
+  addGeneratedBatch: (batchId: string, recordCount: number) => FileNode;
   setFileStatus: (id: string, status: FileNode["status"]) => void;
+  setUploadedContent: (id: string, content: string) => void;
   clearNewBadges: () => void;
   fileCount: () => number;
   folderCount: () => number;
@@ -23,6 +27,7 @@ export const useFileStore = create<FileStore>((set, get) => ({
   nodes: SEED_TREE,
   selectedId: null,
   query: "",
+  uploadedContent: {},
 
   select: (id) => set({ selectedId: id }),
 
@@ -82,7 +87,44 @@ export const useFileStore = create<FileStore>((set, get) => ({
       selectedId: created[0]?.id ?? state.selectedId,
     }));
 
+    created.forEach((node, i) => {
+      const rawFile = files[i];
+      if (node.fileKind !== "csv" && node.fileKind !== "txt" && node.fileKind !== "md") return;
+      rawFile
+        .text()
+        .then((text) => get().setUploadedContent(node.id, text))
+        .catch(() => {});
+    });
+
     return created;
+  },
+
+  addGeneratedBatch: (batchId, recordCount) => {
+    const id = `generated-${batchId}`;
+    const existing = get().nodes.find((n) => n.id === id);
+    if (existing) return existing as FileNode;
+
+    const node: FileNode = {
+      id,
+      name: `${batchId}.json`,
+      path: `generated/${batchId}.json`,
+      kind: "file",
+      fileKind: "json",
+      meta: `${recordCount} record${recordCount === 1 ? "" : "s"}`,
+      status: "new",
+      parentId: "folder-generated",
+    };
+
+    set((state) => ({
+      nodes: [
+        ...state.nodes.map((n) =>
+          n.kind === "folder" && n.id === "folder-generated" ? { ...n, collapsed: false } : n,
+        ),
+        node,
+      ],
+    }));
+
+    return node;
   },
 
   setFileStatus: (id, status) =>
@@ -90,6 +132,11 @@ export const useFileStore = create<FileStore>((set, get) => ({
       nodes: state.nodes.map((n) =>
         n.kind === "file" && n.id === id ? { ...n, status } : n,
       ),
+    })),
+
+  setUploadedContent: (id, content) =>
+    set((state) => ({
+      uploadedContent: { ...state.uploadedContent, [id]: content },
     })),
 
   clearNewBadges: () =>

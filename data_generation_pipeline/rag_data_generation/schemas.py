@@ -210,6 +210,53 @@ class MeasureDistribution(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class LearnedPattern(BaseModel):
+    """
+    A generalized structural/stylistic pattern extracted from a real uploaded file.
+
+    Persisted to corpus/learned_patterns.json (see tools.append_learned_pattern) and
+    folded back into future generate_data_agent prompts via build_corpus_context, so
+    the synthetic generator keeps pace with the real-world variety of files that get
+    uploaded over time. Must NEVER contain verbatim member-identifying content —
+    see the privacy rule in pattern_extractor_agent's instruction.
+    """
+
+    pattern_id: str = Field(
+        description="Unique ID, format LP-000001 (assigned by the caller, not the LLM)"
+    )
+    source_type: SourceType = Field(
+        description="Which raw_payload channel this pattern resembles"
+    )
+    extracted_from: str = Field(
+        description="Filename the pattern was extracted from"
+    )
+    extracted_at: str = Field(
+        description="ISO-8601 UTC datetime of extraction"
+    )
+    hedis_measure_hint: Optional[str] = Field(
+        default=None,
+        description="HEDIS measure this file appears related to, if inferable, else null",
+    )
+    pattern_summary: str = Field(
+        description=(
+            "1-2 sentence, GENERALIZED description of the notable structural or "
+            "stylistic pattern (no verbatim member-identifying content)"
+        )
+    )
+    style_notes: str = Field(
+        description=(
+            "Concrete, reusable guidance for the generator: phrasing quirks, "
+            "formatting conventions, shorthand, tone — generic, not copied verbatim"
+        )
+    )
+    is_novel: bool = Field(
+        description=(
+            "True if this differs meaningfully from the existing corpus and "
+            "previously learned patterns; False if it's a duplicate/near-duplicate"
+        )
+    )
+
+
 class DatasetSummary(BaseModel):
     """Output schema for summary_generator_agent → state['dataset_summary']."""
 

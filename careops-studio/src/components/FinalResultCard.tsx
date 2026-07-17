@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pencil } from "lucide-react";
+import { AlertTriangle, Check, Pencil } from "lucide-react";
 import { updateCareGapField } from "../lib/agentWorkflowClient";
 import { useWorkflowStore } from "../store/workflowStore";
 import type { WorkflowRun } from "../types";
@@ -26,23 +26,24 @@ export function FinalResultCard({ run }: { run: WorkflowRun }) {
   const gapId = (careGap?.gap_id ?? disposition?.gap_id) as string | undefined;
   const manualEdits = run.manualEdits ?? [];
 
-  const chips: { label: string; value: string }[] = [
-    { label: "Member", value: (summary?.member_id ?? disposition?.member_id) as string },
-    { label: "Care Gap", value: (careGap?.gap_id ?? disposition?.gap_id) as string },
+  const metrics: { label: string; value: string; mono?: boolean }[] = [
+    { label: "Member", value: (summary?.member_id ?? disposition?.member_id) as string, mono: true },
+    { label: "Care Gap", value: (careGap?.gap_id ?? disposition?.gap_id) as string, mono: true },
     { label: "Measure", value: (summary?.measure_name ?? disposition?.measure_name) as string },
     {
       label: "Disposition",
       value: (disposition?.raw_disposition_code ?? summary?.disposition_code) as string,
+      mono: true,
     },
     { label: "Action", value: disposition?.action_taken as string },
-    { label: "Source", value: run.fileNames.join(", ") },
-    { label: "Duration", value: formatDuration(run.startedAt, run.completedAt) as string },
+    { label: "Source", value: run.fileNames.join(", "), mono: true },
+    { label: "Duration", value: formatDuration(run.startedAt, run.completedAt) as string, mono: true },
   ].filter((item) => item.value !== undefined && item.value !== null && item.value !== "");
 
   const changeEntries = careGap?.changes ? Object.entries(careGap.changes) : [];
 
   return (
-    <section className="result-panel result-panel--final">
+    <section className={`result-panel result-panel--final result-panel--final-${success ? "ok" : "warn"}`}>
       <div className="result-panel__header result-panel__header--final">
         <div className="result-final__heading">
           <span className="result-panel__eyebrow">Final Result</span>
@@ -54,21 +55,24 @@ export function FinalResultCard({ run }: { run: WorkflowRun }) {
           </p>
         </div>
         <span
-          className={`result-panel__badge result-panel__badge--${success ? "success" : "warn"}`}
+          className={`result-final__seal result-final__seal--${success ? "ok" : "warn"}`}
         >
+          {success ? <Check size={13} strokeWidth={3} /> : <AlertTriangle size={12} strokeWidth={2.5} />}
           {success ? "Verified" : "Needs review"}
         </span>
       </div>
 
-      {chips.length > 0 && (
-        <div className="result-chips">
-          {chips.map((c) => (
-            <span key={c.label} className="result-chip">
-              <span className="result-chip__label">{c.label}</span>
-              <span className="result-chip__value">{c.value}</span>
-            </span>
+      {metrics.length > 0 && (
+        <dl className="final-metrics">
+          {metrics.map((m) => (
+            <div className="final-metric" key={m.label}>
+              <dt className="final-metric__label">{m.label}</dt>
+              <dd className={`final-metric__value${m.mono ? " final-metric__value--mono" : ""}`}>
+                {m.value}
+              </dd>
+            </div>
           ))}
-        </div>
+        </dl>
       )}
 
       {changeEntries.length > 0 && (

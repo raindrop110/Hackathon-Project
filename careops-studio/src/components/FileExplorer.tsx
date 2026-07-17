@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useMemo, type ReactNode } from "react";
 import { useFileStore } from "../store/fileStore";
+import { useUiStore } from "../store/uiStore";
 import type { FileNode, FolderNode, TreeNode } from "../types";
 
 function FileIcon({ node }: { node: FileNode }) {
@@ -43,6 +44,7 @@ export function FileExplorer() {
   const toggleFolder = useFileStore((s) => s.toggleFolder);
   const collapseAll = useFileStore((s) => s.collapseAll);
   const expandAll = useFileStore((s) => s.expandAll);
+  const openFile = useUiStore((s) => s.openFile);
 
   const fileCount = nodes.filter((n) => n.kind === "file").length;
 
@@ -79,7 +81,10 @@ export function FileExplorer() {
         node={node}
         depth={depth}
         selected={selectedId === node.id}
-        onSelect={() => select(node.id)}
+        onSelect={() => {
+          select(node.id);
+          openFile(node.id);
+        }}
       />
     );
   };

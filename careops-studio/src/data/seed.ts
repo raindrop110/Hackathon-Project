@@ -61,6 +61,14 @@ export const SEED_TREE: TreeNode[] = [
     collapsed: true,
   },
   {
+    id: "folder-generated",
+    name: "generated",
+    path: "generated",
+    kind: "folder",
+    parentId: null,
+    collapsed: false,
+  },
+  {
     id: "folder-uploads",
     name: "uploads",
     path: "data/uploads",

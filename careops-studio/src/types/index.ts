@@ -1,4 +1,4 @@
-export type FileKind = "csv" | "txt" | "md" | "zip" | "other";
+export type FileKind = "csv" | "txt" | "md" | "json" | "zip" | "other";
 
 export type FileStatus = "ready" | "uploading" | "processing" | "error" | "new";
 
@@ -108,6 +108,43 @@ export type WorkflowEvent =
   | { type: "stage_error"; stageId: string; error: string }
   | { type: "run_complete"; result?: RunResult }
   | { type: "run_error"; error: string };
+
+// ── Generation quality (heatmap) types ──────────────────────────────────────
+// Workflow 3: scores an entire synthetic batch (workflow 2) against one real
+// disposition summary (workflow 1) across 5 alignment dimensions.
+
+export const HEATMAP_DIMENSIONS = [
+  "measure_alignment",
+  "channel_alignment",
+  "disposition_plausibility",
+  "confidence_calibration",
+  "structural_realism",
+] as const;
+
+export type HeatmapDimension = (typeof HEATMAP_DIMENSIONS)[number];
+
+export interface HeatmapCell {
+  record_id: string;
+  source_type: string;
+  measure_alignment: number;
+  channel_alignment: number;
+  disposition_plausibility: number;
+  confidence_calibration: number;
+  structural_realism: number;
+  overall: number;
+  notes?: string;
+}
+
+export interface GenerationQualityReport {
+  batch_id: string;
+  reference_record_id: string;
+  dimensions: string[];
+  cells: HeatmapCell[];
+  overall_score: number;
+  strongest_dimension: string;
+  weakest_dimension: string;
+  narrative: string;
+}
 
 // ── Client ──────────────────────────────────────────────────────────────────
 

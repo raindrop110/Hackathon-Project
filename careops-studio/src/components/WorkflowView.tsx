@@ -5,6 +5,7 @@ import type {
   CareGapResult,
   DispositionResult,
   SummaryAgentResult,
+  WorkflowRun,
   WorkflowStage,
 } from "../types";
 
@@ -31,39 +32,62 @@ export function WorkflowView() {
   });
 
   const { summarization, schema_normalization, care_gap_connection } = activeRun.agentResults;
+  const hasAgentResults = Boolean(summarization || schema_normalization || care_gap_connection);
+
+  const completedStages = activeRun.stages.filter((s) => s.status === "completed").length;
 
   return (
     <div className="workflow">
       <header className="workflow__header">
-        <div>
-          <p className="workflow__eyebrow">Agentic workflow</p>
+        <div className="workflow__headline">
+          <p className="workflow__eyebrow">Agentic Workflow</p>
           <h2 className="workflow__title">Run · {activeRun.fileNames.join(", ")}</h2>
           <p className="workflow__meta">
-            Started {started} · Status{" "}
-            <strong className={`text-status text-status--${activeRun.status}`}>
-              {activeRun.status.charAt(0).toUpperCase() + activeRun.status.slice(1)}
-            </strong>
+            <span className="mono-chip">{activeRun.id.slice(0, 12)}</span>
+            <span className="workflow__meta-sep" aria-hidden>
+              ·
+            </span>
+            Started {started}
           </p>
         </div>
-        <button type="button" className="btn-ghost" onClick={resetToIdle}>
-          <RotateCcw size={14} />
-          New upload
-        </button>
+        <div className="workflow__meta-cluster">
+          <StatusPill status={activeRun.status} />
+          <button type="button" className="btn-ghost" onClick={resetToIdle}>
+            <RotateCcw size={14} />
+            New upload
+          </button>
+        </div>
       </header>
 
-      <StageRail stages={activeRun.stages} />
+      <StageRail stages={activeRun.stages} completed={completedStages} />
 
-      {activeRun.status === "complete" && <FinalResultCard run={activeRun} />}
+      <div className="workflow__body">
+        <div className="workflow__main">
+          {activeRun.status === "running" && activeRun.activeStageId && (
+            <div className="active-agent-banner">
+              <Loader2 size={13} className="spin" />
+              <span className="active-agent-banner__name">
+                {STAGE_AGENT_LABELS[activeRun.activeStageId] ?? activeRun.activeStageId}
+              </span>
+              <span className="active-agent-banner__suffix">is processing…</span>
+            </div>
+          )}
 
-      {activeRun.status === "running" && activeRun.activeStageId && (
-        <div className="active-agent-banner">
-          <Loader2 size={13} className="spin" />
-          <span className="active-agent-banner__name">
-            {STAGE_AGENT_LABELS[activeRun.activeStageId] ?? activeRun.activeStageId}
-          </span>
-          <span className="active-agent-banner__suffix">is processing…</span>
+          {activeRun.status === "complete" && <FinalResultCard run={activeRun} />}
+
+          {hasAgentResults && (
+            <div className="workflow__agents">
+              {summarization && <SummarizationPanel data={summarization} />}
+              {schema_normalization && <DispositionPanel data={schema_normalization} />}
+              {care_gap_connection && <CareGapPanel data={care_gap_connection} />}
+            </div>
+          )}
         </div>
-      )}
+
+        <aside className="workflow__aside">
+          <RunDetails run={activeRun} started={started} />
+        </aside>
+      </div>
 
       <section className="workflow__logs" aria-label="Run output">
         <div className="workflow__logs-header">Output</div>
@@ -75,29 +99,97 @@ export function WorkflowView() {
           ))}
         </pre>
       </section>
-
-      {summarization && <SummarizationPanel data={summarization} />}
-      {schema_normalization && <DispositionPanel data={schema_normalization} />}
-      {care_gap_connection && <CareGapPanel data={care_gap_connection} />}
     </div>
+  );
+}
+
+// ── Run details sidebar ──────────────────────────────────────────────────────
+
+function formatDuration(startedAt: string, completedAt?: string): string | undefined {
+  if (!completedAt) return undefined;
+  const seconds = Math.max(
+    1,
+    Math.round((new Date(completedAt).getTime() - new Date(startedAt).getTime()) / 1000),
+  );
+  if (seconds < 60) return `${seconds}s`;
+  return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+}
+
+function RunDetails({ run, started }: { run: WorkflowRun; started: string }) {
+  const completedStages = run.stages.filter((s) => s.status === "completed").length;
+  const duration = formatDuration(run.startedAt, run.completedAt);
+  const manualEdits = run.manualEdits?.length ?? 0;
+
+  const rows: { key: string; value: string }[] = [
+    { key: "run_id", value: run.id.slice(0, 12) },
+    { key: "started", value: started },
+    ...(duration ? [{ key: "duration", value: duration }] : []),
+    { key: "files", value: run.fileNames.join(", ") },
+    { key: "stages", value: `${completedStages}/${run.stages.length} complete` },
+    ...(manualEdits > 0
+      ? [{ key: "manual_edits", value: `${manualEdits} field${manualEdits > 1 ? "s" : ""}` }]
+      : []),
+  ];
+
+  return (
+    <section className="result-panel run-details">
+      <div className="result-panel__header">
+        <span className="result-panel__eyebrow">Run Details</span>
+        <StatusPill status={run.status} />
+      </div>
+      <dl className="spec-list">
+        {rows.map((r) => (
+          <div className="spec-list__row" key={r.key}>
+            <dt className="spec-list__key">{r.key}</dt>
+            <dd className="spec-list__value">{r.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+// ── Status pill ──────────────────────────────────────────────────────────────
+
+function StatusPill({ status }: { status: string }) {
+  const label = status.charAt(0).toUpperCase() + status.slice(1);
+  return (
+    <span className={`status-pill status-pill--${status}`}>
+      <span className="status-pill__dot" aria-hidden />
+      {label}
+    </span>
   );
 }
 
 // ── Stage rail ───────────────────────────────────────────────────────────────
 
-function StageRail({ stages }: { stages: WorkflowStage[] }) {
+function StageRail({ stages, completed }: { stages: WorkflowStage[]; completed: number }) {
+  const pct = stages.length ? Math.round((completed / stages.length) * 100) : 0;
   return (
-    <ol className="stage-rail" aria-label="Workflow stages">
-      {stages.map((stage, index) => (
-        <li key={stage.id} className={`stage-rail__item stage-rail__item--${stage.status}`}>
-          {index > 0 && <span className="stage-rail__connector" aria-hidden />}
-          <span className="stage-rail__dot" aria-hidden>
-            <StageIcon status={stage.status} />
+    <section className="stage-panel" aria-label="Workflow pipeline">
+      <div className="stage-panel__head">
+        <span className="stage-panel__title">Pipeline</span>
+        <span className="stage-panel__progress">
+          <span className="stage-panel__progress-count">
+            {completed}/{stages.length}
           </span>
-          <span className="stage-rail__label">{stage.label}</span>
-        </li>
-      ))}
-    </ol>
+          <span className="stage-panel__progress-track" aria-hidden>
+            <span className="stage-panel__progress-fill" style={{ width: `${pct}%` }} />
+          </span>
+        </span>
+      </div>
+      <ol className="stage-rail" aria-label="Workflow stages">
+        {stages.map((stage, index) => (
+          <li key={stage.id} className={`stage-rail__item stage-rail__item--${stage.status}`}>
+            {index > 0 && <span className="stage-rail__connector" aria-hidden />}
+            <span className="stage-rail__dot" aria-hidden>
+              <StageIcon status={stage.status} />
+            </span>
+            <span className="stage-rail__label">{stage.label}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 

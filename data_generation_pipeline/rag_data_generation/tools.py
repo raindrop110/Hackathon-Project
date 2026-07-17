@@ -52,6 +52,58 @@ def _get_corpus() -> dict[str, Any]:
     return _corpus_cache
 
 
+def reload_corpus() -> dict[str, Any]:
+    """Force a fresh read of every corpus file, bypassing the in-process cache.
+
+    Needed because learned_patterns.json can change between generation runs
+    within the same long-lived process (see append_learned_pattern below) —
+    the plain cached _get_corpus() would keep serving a stale snapshot.
+    """
+    global _corpus_cache
+    _corpus_cache = None
+    return _get_corpus()
+
+
+# ---------------------------------------------------------------------------
+# Learned-pattern persistence — the feedback half of the upload → corpus →
+# generation loop. pattern_extractor_agent (see agent.py) decides whether an
+# uploaded file demonstrates something new; if so, the caller persists it here
+# so every future generation run (not just the next one) can draw on it.
+# ---------------------------------------------------------------------------
+
+_LEARNED_PATTERNS_PATH = _CORPUS_DIR / "learned_patterns.json"
+_MAX_LEARNED_PATTERNS_IN_PROMPT = 40
+
+
+def learned_pattern_count() -> int:
+    """Number of patterns persisted so far — used to mint the next pattern_id."""
+    if not _LEARNED_PATTERNS_PATH.exists():
+        return 0
+    with open(_LEARNED_PATTERNS_PATH, encoding="utf-8") as fh:
+        data = json.load(fh)
+    return len(data.get("patterns", []))
+
+
+def append_learned_pattern(pattern: dict[str, Any]) -> dict[str, Any]:
+    """Append one extracted pattern to corpus/learned_patterns.json and invalidate
+    the cache so the next build_corpus_context(force_reload=True) picks it up."""
+    if _LEARNED_PATTERNS_PATH.exists():
+        with open(_LEARNED_PATTERNS_PATH, encoding="utf-8") as fh:
+            data = json.load(fh)
+    else:
+        data = {"patterns": []}
+
+    data.setdefault("patterns", []).append(pattern)
+
+    with open(_LEARNED_PATTERNS_PATH, "w", encoding="utf-8") as fh:
+        json.dump(data, fh, indent=2, ensure_ascii=False)
+
+    global _corpus_cache
+    _corpus_cache = None
+
+    return pattern
+
+
 # ---------------------------------------------------------------------------
 # Core retrieval function — THIS IS THE SWAP SEAM
 # ---------------------------------------------------------------------------
@@ -123,7 +175,7 @@ retrieve_reference_tool = FunctionTool(func=retrieve_reference)
 # Helper used by agent.py to pre-load corpus into instruction strings
 # ---------------------------------------------------------------------------
 
-def build_corpus_context() -> str:
+def build_corpus_context(force_reload: bool = False) -> str:
     """
     Return the full corpus serialised as a formatted JSON string.
 
@@ -131,12 +183,31 @@ def build_corpus_context() -> str:
     (generate_data_agent, sme_validator_agent) at module load time, giving those
     agents all reference data without needing a live tool call.
 
+    force_reload=True bypasses the cache — used by the upload-driven generation
+    loop (pipeline_runner.py) so a pattern learned moments ago from a fresh
+    upload is visible to the very next generation run, not just the one after
+    the process restarts.
+
     When swapping to Vertex AI RAG, remove calls to this function from agent.py
     and instead attach `retrieve_reference_tool` (or `vertex_rag_tool`) directly
     to the agents (after also removing their `output_schema` or splitting into
     a retriever + schema agent pair).
     """
-    raw = json.dumps(retrieve_reference_raw("all"), indent=2, ensure_ascii=False)
+    corpus = reload_corpus() if force_reload else _get_corpus()
+
+    learned = corpus.get("learned_patterns")
+    if learned and len(learned.get("patterns", [])) > _MAX_LEARNED_PATTERNS_IN_PROMPT:
+        # Keep the full history on disk; only cap what we inject into the prompt
+        # so the corpus context doesn't grow unbounded as uploads accumulate.
+        corpus = {
+            **corpus,
+            "learned_patterns": {
+                **learned,
+                "patterns": learned["patterns"][-_MAX_LEARNED_PATTERNS_IN_PROMPT:],
+            },
+        }
+
+    raw = json.dumps(corpus, indent=2, ensure_ascii=False)
     # ADK's inject_session_state replaces every {variable} pattern in instruction
     # strings with session-state lookups.  The corpus JSON contains many {…}
     # delimiters (structural braces AND template strings like {MEASURE_ID}) that

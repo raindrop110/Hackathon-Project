@@ -1,8 +1,9 @@
-export function extToFileKind(name: string): "csv" | "txt" | "md" | "zip" | "other" {
+export function extToFileKind(name: string): "csv" | "txt" | "md" | "json" | "zip" | "other" {
   const ext = name.split(".").pop()?.toLowerCase() ?? "";
   if (ext === "csv") return "csv";
   if (ext === "txt") return "txt";
   if (ext === "md" || ext === "markdown") return "md";
+  if (ext === "json") return "json";
   if (ext === "zip") return "zip";
   return "other";
 }
