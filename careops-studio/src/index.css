@@ -829,6 +829,10 @@ code {
   color: #dcecc4;
 }
 
+.workflow__logs-line {
+  animation: fade-in 180ms ease both;
+}
+
 /* ——— Status bar ——— */
 
 .status-bar {
@@ -914,7 +918,8 @@ code {
 @media (prefers-reduced-motion: reduce) {
   .ide__right::after,
   .stage-rail__item--active .stage-rail__dot,
-  .badge--new {
+  .badge--new,
+  .workflow__logs-line {
     animation: none;
   }
 
@@ -962,6 +967,173 @@ code {
 
 .active-agent-banner__suffix {
   color: var(--ink-muted);
+}
+
+/* ——— Final result panel (headline summary on result-panel primitives) ——— */
+
+.result-panel--final {
+  border-color: color-mix(in oklab, var(--humana-green) 32%, var(--panel-left-border));
+  box-shadow: 0 14px 30px -22px rgba(28, 47, 16, 0.4);
+}
+
+.result-panel__header--final {
+  align-items: flex-start;
+  padding: 14px 16px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--humana-green) 9%, white),
+    var(--surface-muted)
+  );
+}
+
+.result-final__heading {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.result-final__title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  color: var(--ink);
+}
+
+.result-final__run {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--ink-muted);
+}
+
+.result-final__run code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink);
+  background: color-mix(in oklab, var(--surface-muted) 60%, white);
+  border: 1px solid var(--panel-left-border);
+  border-radius: 5px;
+  padding: 1px 6px;
+}
+
+.result-final__changes {
+  padding: 12px 0 4px;
+}
+
+.result-final__changes-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 0 14px;
+}
+
+.result-final__changes-hint {
+  font-size: 11px;
+  font-style: italic;
+  color: var(--humana-plum);
+  opacity: 0.85;
+}
+
+.result-final__changes .diff-table {
+  margin: 6px 0 0;
+}
+
+/* Editable "After" cell — click a value to correct it; writes to care_gaps.csv */
+
+.diff-cell-to {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  appearance: none;
+  border: none;
+  margin: 0;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: none;
+  font: inherit;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--success);
+  cursor: pointer;
+  border-bottom: 1px dashed color-mix(in oklab, var(--success) 50%, transparent);
+}
+
+.diff-cell-to:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--success) 10%, white);
+  color: var(--humana-green-deep);
+  border-bottom-color: var(--humana-green-deep);
+}
+
+.diff-cell-to:disabled {
+  cursor: default;
+  border-bottom-color: transparent;
+}
+
+.diff-cell-to__value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.diff-cell-pencil {
+  flex-shrink: 0;
+  opacity: 0.55;
+}
+
+.diff-cell-tag {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--humana-plum) 14%, white);
+  color: var(--humana-plum);
+  font-family: var(--font-ui);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.diff-cell-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.diff-cell-input {
+  width: 12ch;
+  padding: 2px 6px;
+  border: 1px solid var(--humana-green);
+  border-radius: 4px;
+  background: #fff;
+  font: inherit;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.diff-cell-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--humana-green) 25%, transparent);
+}
+
+.diff-cell-spinner {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in oklab, var(--humana-green) 30%, transparent);
+  border-top-color: var(--humana-green);
+  animation: spin 0.7s linear infinite;
+}
+
+.diff-cell-error {
+  font-size: 11px;
+  color: var(--danger);
 }
 
 /* ——— Result panels ——— */

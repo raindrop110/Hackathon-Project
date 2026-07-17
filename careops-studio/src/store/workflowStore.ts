@@ -21,6 +21,7 @@ interface WorkflowStore {
   unsubscribe: (() => void) | null;
   startForFiles: (files: FileNode[], rawFiles: File[]) => Promise<void>;
   applyEvent: (event: WorkflowEvent) => void;
+  applyCareGapEdit: (field: string, value: string) => void;
   resetToIdle: () => void;
 }
 
@@ -124,6 +125,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
           status: "complete",
           activeStageId: "complete",
           finalResult: event.result as RunResult | undefined,
+          completedAt: new Date().toISOString(),
           logs: pushLog("Workflow complete — all agents finished"),
           stages: activeRun.stages.map((s) => ({ ...s, status: "completed" })),
         },
@@ -145,6 +147,37 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       });
       activeRun.fileIds.forEach((id) => useFileStore.getState().setFileStatus(id, "error"));
     }
+  },
+
+  applyCareGapEdit: (field, value) => {
+    const { activeRun } = get();
+    const careGap = activeRun?.agentResults.care_gap_connection;
+    if (!activeRun || !careGap?.changes?.[field]) return;
+
+    const updatedCareGap: CareGapResult = {
+      ...careGap,
+      changes: {
+        ...careGap.changes,
+        [field]: { ...careGap.changes[field], to: value },
+      },
+    };
+
+    set({
+      activeRun: {
+        ...activeRun,
+        agentResults: { ...activeRun.agentResults, care_gap_connection: updatedCareGap },
+        finalResult: activeRun.finalResult
+          ? { ...activeRun.finalResult, careGap: updatedCareGap }
+          : activeRun.finalResult,
+        manualEdits: activeRun.manualEdits?.includes(field)
+          ? activeRun.manualEdits
+          : [...(activeRun.manualEdits ?? []), field],
+        logs: [
+          ...activeRun.logs,
+          `[${new Date().toLocaleTimeString()}] Manually corrected ${field} → ${value}`,
+        ],
+      },
+    });
   },
 
   startForFiles: async (files, rawFiles) => {

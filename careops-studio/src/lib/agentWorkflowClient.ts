@@ -48,3 +48,24 @@ function createRealAgentWorkflowClient(): AgentWorkflowClient {
 }
 
 export const agentWorkflowClient = createRealAgentWorkflowClient();
+
+export async function updateCareGapField(
+  gapId: string,
+  field: string,
+  value: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE}/care-gap/${encodeURIComponent(gapId)}/field`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ field, value }),
+    });
+    const body = await res.json();
+    if (!res.ok || body.success === false) {
+      return { success: false, error: body.error ?? `${res.status} ${res.statusText}` };
+    }
+    return { success: true };
+  } catch {
+    return { success: false, error: "Network error" };
+  }
+}

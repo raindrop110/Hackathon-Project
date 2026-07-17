@@ -1,5 +1,6 @@
 import { AlertCircle, Check, Circle, Loader2, RotateCcw } from "lucide-react";
 import { useWorkflowStore } from "../store/workflowStore";
+import { FinalResultCard } from "./FinalResultCard";
 import type {
   CareGapResult,
   DispositionResult,
@@ -52,6 +53,8 @@ export function WorkflowView() {
 
       <StageRail stages={activeRun.stages} />
 
+      {activeRun.status === "complete" && <FinalResultCard run={activeRun} />}
+
       {activeRun.status === "running" && activeRun.activeStageId && (
         <div className="active-agent-banner">
           <Loader2 size={13} className="spin" />
@@ -66,7 +69,9 @@ export function WorkflowView() {
         <div className="workflow__logs-header">Output</div>
         <pre className="workflow__logs-body">
           {activeRun.logs.map((line, i) => (
-            <div key={`${i}-${line.slice(0, 24)}`}>{line}</div>
+            <div className="workflow__logs-line" key={`${i}-${line.slice(0, 24)}`}>
+              {line}
+            </div>
           ))}
         </pre>
       </section>

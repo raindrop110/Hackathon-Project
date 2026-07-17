@@ -13,7 +13,9 @@ from fastapi.responses import StreamingResponse
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
+from pydantic import BaseModel
 
+from disposition_normalization.data_connection_agent.tools.care_gap_lookup import update_care_gap
 from disposition_normalization.orchestrator_agent import root_agent as orchestrator
 
 app = FastAPI(title="Disposition Normalization API")
@@ -193,6 +195,17 @@ async def stream_events(run_id: str):
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+class CareGapFieldEdit(BaseModel):
+    field: str
+    value: str
+
+
+@app.post("/api/care-gap/{gap_id}/field")
+async def edit_care_gap_field(gap_id: str, payload: CareGapFieldEdit):
+    """Manual correction endpoint — writes a single field straight to care_gaps.csv."""
+    return update_care_gap(gap_id, {payload.field: payload.value})
 
 
 @app.get("/api/health")

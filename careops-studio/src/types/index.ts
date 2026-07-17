@@ -95,6 +95,8 @@ export interface WorkflowRun {
     care_gap_connection: CareGapResult;
   }>;
   finalResult?: RunResult;
+  completedAt?: string;
+  manualEdits?: string[];
 }
 
 // ── Events ──────────────────────────────────────────────────────────────────
