@@ -1,9 +1,19 @@
+import re
 import tempfile
 from pathlib import Path
 from typing import Any
 
 TMP_DIR = Path(tempfile.gettempdir()) / "disposition_normalization"
 TMP_DIR.mkdir(exist_ok=True)
+
+_CODE_FENCE_RE = re.compile(r"^```(?:json)?\s*\n?(.*?)\n?```$", re.DOTALL)
+
+
+def _strip_code_fences(text: str) -> str:
+    """Strip a wrapping ```json ... ``` fence models sometimes add despite being
+    instructed to return raw JSON only, so downstream json.loads calls don't choke on it."""
+    match = _CODE_FENCE_RE.match(text.strip())
+    return match.group(1).strip() if match else text
 
 
 def save_intermediate(data: str, run_id: str, step: str) -> dict[str, Any]:
@@ -21,5 +31,5 @@ def save_intermediate(data: str, run_id: str, step: str) -> dict[str, Any]:
     """
     TMP_DIR.mkdir(exist_ok=True)
     path = TMP_DIR / f"{run_id}_{step}.json"
-    path.write_text(data, encoding="utf-8")
+    path.write_text(_strip_code_fences(data), encoding="utf-8")
     return {"file_path": str(path), "step": step, "run_id": run_id}

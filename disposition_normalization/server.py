@@ -1,6 +1,7 @@
 import asyncio
 import json
 import random
+import re
 import tempfile
 import traceback
 from datetime import datetime, timezone
@@ -55,6 +56,15 @@ _AGENT_STAGE = {
     "data_schema_agent": "schema_normalization",
     "data_connection_agent": "care_gap_connection",
 }
+
+_CODE_FENCE_RE = re.compile(r"^```(?:json)?\s*\n?(.*?)\n?```$", re.DOTALL)
+
+
+def _strip_code_fences(text: str) -> str:
+    """Strip a wrapping ```json ... ``` fence a sub-agent's raw text output may
+    carry despite being instructed to return JSON only, so json.loads doesn't choke on it."""
+    match = _CODE_FENCE_RE.match(text.strip())
+    return match.group(1).strip() if match else text
 
 # Per-run SSE queues
 _queues: dict[str, asyncio.Queue] = {}
@@ -188,8 +198,9 @@ def _run_orchestrator_sync(
                 stages_completed.add(stage)
                 raw = (resp.response or {}).get("result", "")
                 text = raw if isinstance(raw, str) else json.dumps(raw)
+                text = _strip_code_fences(text)
                 try:
-                    result = json.loads(text.strip())
+                    result = json.loads(text)
                 except (json.JSONDecodeError, AttributeError):
                     result = {"raw": text}
                 agent_results[stage] = result

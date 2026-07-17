@@ -1,6 +1,16 @@
 import json
+import re
 from pathlib import Path
 from typing import Any
+
+_CODE_FENCE_RE = re.compile(r"^```(?:json)?\s*\n?(.*?)\n?```$", re.DOTALL)
+
+
+def _strip_code_fences(text: str) -> str:
+    """Strip a wrapping ```json ... ``` fence a previous agent's saved output may
+    still carry, so json.loads below doesn't choke on it."""
+    match = _CODE_FENCE_RE.match(text.strip())
+    return match.group(1).strip() if match else text
 
 
 def load_input_json(file_path: str) -> dict[str, Any]:
@@ -19,7 +29,7 @@ def load_input_json(file_path: str) -> dict[str, Any]:
     if not path.exists():
         return {"error": f"File not found: {file_path}"}
 
-    text = path.read_text(encoding="utf-8").strip()
+    text = _strip_code_fences(path.read_text(encoding="utf-8").strip())
 
     # Try single JSON object first
     try:
